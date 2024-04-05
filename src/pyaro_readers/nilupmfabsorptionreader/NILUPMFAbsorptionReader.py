@@ -93,39 +93,37 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         ts_type: str = "hourly",
     ):
 
-        self._filename = filename + ABSORB_FOLDER
         self._stations = {}
         self._data = {}
         self._set_filters(filters)
         self._header = []
-        _laststatstr = ""
 
-        files_pathlib = Path(self._filename).glob("*.nas")
-        files = [x for x in files_pathlib if x.is_file()]
-        bar = tqdm(desc=tqdm_desc, total=len(files))
-        for file in files:
-            bar.update(1)
-            with open(file, newline="") as f:
-                lines = f.readlines()
-                self._process_file(lines, file)
+        if Path(filename).is_file():
+            self._filename = filename
+            self._process_file(self._filename)
 
-        # self._data[variable].append(
-        #     value, station, lat, lon, alt, start, end, Flag.VALID, np.nan
-        # )
-        # if not station in self._stations:
-        #     self._stations[station] = Station(
-        #         {
-        #             "station": station,
-        #             "longitude": lon,
-        #             "latitude": lat,
-        #             "altitude": alt,
-        #             "country": country,
-        #             "url": "",
-        #             "long_name": station,
-        #         }
-        #     )
+        elif Path(filename).is_dir():
+            self._filename = filename + ABSORB_FOLDER
+            files_pathlib = Path(self._filename).glob("*.nas")
+            files = [x for x in files_pathlib if x.is_file()]
 
-    def _process_file(self, lines: list[str], file: Path) -> None:
+            if len(files) == 0:
+                raise ValueError(
+                    f"Could not find any nas files in given folder {self._filename}"
+                )
+            bar = tqdm(desc=tqdm_desc, total=len(files))
+            for file in files:
+                bar.update(1)
+                self._process_file(file)
+        else:
+            raise ValueError(f"Given filename {filename} is neither a folder or a file")
+
+    def _process_file(self, file: Path):
+        with open(file, newline="") as f:
+            lines = f.readlines()
+            self._process_open_file(lines, file)
+
+    def _process_open_file(self, lines: list[str], file: Path) -> None:
         line_index = 0
         data_start_line = int(lines[line_index].split()[0])
         station = lines[INDECIES["CODE"]].split(":")[1].strip()
@@ -178,7 +176,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
                 self._data[variable] = da
 
         for line in lines[data_start_line:]:
-            # TODO: This NAN_CODE check doesnt seem to work. Read data still has points with 999.999878
+
             line_entries = [
                 float(x) if abs(float(x) - NAN_CODE) > NAN_EPS else np.nan
                 for x in line.split()
