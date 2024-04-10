@@ -2,7 +2,7 @@ import logging
 import os
 import sqlite3
 
-from _lowlevel_helpers import BrowseDict
+from ._lowlevel_helpers import BrowseDict
 
 logger = logging.getLogger(__name__)
 

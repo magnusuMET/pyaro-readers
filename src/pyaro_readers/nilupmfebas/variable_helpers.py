@@ -3,7 +3,7 @@ from __future__ import annotations
 from configparser import ConfigParser
 from pathlib import Path
 
-import resources
+from . import resources
 from .exceptions import VariableDefinitionError
 
 

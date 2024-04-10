@@ -3,10 +3,10 @@ import logging
 import os
 import re
 
-import const
+from . import const
 import numpy as np
-from _lowlevel_helpers import BrowseDict
-from aux_var_helpers import (
+from ._lowlevel_helpers import BrowseDict
+from .aux_var_helpers import (
     calc_vmro3max,
     compute_ac550dryaer,
     compute_ang4470dryaer_from_dry_scat,
@@ -27,12 +27,14 @@ from aux_var_helpers import (
     make_proxy_wetdep_from_O3,
     vmrx_to_concx,
 )
-from ebas_file_index import EbasFileIndex, EbasSQLRequest
-from ebas_nasa_ames import EbasNasaAmesFile
-from ebas_varinfo import EbasVarInfo
+
+# from ebas_file_index import EbasFileIndex, EbasSQLRequest
+from .ebas_nasa_ames import EbasNasaAmesFile
+from .ebas_varinfo import EbasVarInfo
 from geonum.atmosphere import T0_STD, p0
-from io_helpers import _check_ebas_db_local_vs_remote
-from molmasses import get_molmass
+
+# from io_helpers import _check_ebas_db_local_vs_remote
+from .molmasses import get_molmass
 from pyaro.timeseries import (
     AutoFilterReaderEngine,
     Data,
@@ -40,12 +42,12 @@ from pyaro.timeseries import (
     NpStructuredData,
     Station,
 )
-from readungriddedbase import ReadUngriddedBase
-from stationdata import StationData
+from .readungriddedbase import ReadUngriddedBase
+from .stationdata import StationData
 from tqdm import tqdm
-from tstype import TsType
-from ungriddeddata import UngriddedData
-from units_helpers import get_unit_conversion_fac
+from .tstype import TsType
+from .ungriddeddata import UngriddedData
+from .units_helpers import get_unit_conversion_fac
 
 from .exceptions import (
     EbasFileError,

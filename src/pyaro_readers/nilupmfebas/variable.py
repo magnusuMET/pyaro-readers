@@ -5,7 +5,7 @@ from configparser import ConfigParser
 
 import numpy as np
 
-import var_groups
+from . import var_groups
 from ._lowlevel_helpers import dict_to_str, list_to_shortstr
 from .exceptions import VariableDefinitionError
 from .mathutils import make_binlist

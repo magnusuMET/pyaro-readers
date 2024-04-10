@@ -6,18 +6,18 @@ from pathlib import Path
 
 import numpy as np
 
-import obs_io
-from _lowlevel_helpers import (
+from . import obs_io
+from ._lowlevel_helpers import (
     check_dir_access,
     check_write_access,
     chk_make_subdir,
     list_to_shortstr,
 )
-import resources
-from exceptions import DataIdError, DataSourceError
-from grid_io import GridIO
-from region_defs import ALL_REGION_NAME, HTAP_REGIONS, OLD_AEROCOM_REGIONS
-from varcollection import VarCollection
+from . import resources
+from .exceptions import DataIdError, DataSourceError
+from .grid_io import GridIO
+from .region_defs import ALL_REGION_NAME, HTAP_REGIONS, OLD_AEROCOM_REGIONS
+from .varcollection import VarCollection
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,10 @@ EBAS_MULTICOLUMN_NAME = "EBASMC"
 #: boolean specifying wheter EBAS DB is copied to local cache for faster
 #: access, defaults to True
 EBAS_DB_LOCAL_CACHE = True
+
+#: standard names for coordinates
+STANDARD_COORD_NAMES = ["latitude", "longitude", "altitude"]
+GRID_IO = GridIO()
 
 
 class Config:
@@ -170,19 +174,19 @@ class Config:
 
     _outhomename = "MyPyaerocom"
 
-    with resources.path("pyaerocom.data", "paths.ini") as path:
-        _config_ini_lustre = str(path)
-    with resources.path("pyaerocom.data", "paths_user_server.ini") as path:
-        _config_ini_user_server = str(path)
-    with resources.path("pyaerocom.data", "paths_local_database.ini") as path:
-        _config_ini_localdb = str(path)
+    # with resources.path("pyaerocom.data", "paths.ini") as path:
+    #     _config_ini_lustre = str(path)
+    # with resources.path("pyaerocom.data", "paths_user_server.ini") as path:
+    #     _config_ini_user_server = str(path)
+    # with resources.path("pyaerocom.data", "paths_local_database.ini") as path:
+    #     _config_ini_localdb = str(path)
 
     # this dictionary links environment ID's with corresponding ini files
-    _config_files = {
-        "metno": _config_ini_lustre,
-        "users-db": _config_ini_user_server,
-        "local-db": _config_ini_localdb,
-    }
+    # _config_files = {
+    #     "metno": _config_ini_lustre,
+    #     "users-db": _config_ini_user_server,
+    #     "local-db": _config_ini_localdb,
+    # }
 
     # this dictionary links environment ID's with corresponding subdirectory
     # names that are required to exist in order to load this environment
@@ -192,10 +196,10 @@ class Config:
         "local-db": "modeldata",
     }
 
-    with resources.path("pyaerocom.data", "variables.ini") as path:
-        _var_info_file = str(path)
-    with resources.path("pyaerocom.data", "coords.ini") as path:
-        _coords_info_file = str(path)
+    # with resources.path("pyaerocom.data", "variables.ini") as path:
+    #     _var_info_file = str(path)
+    # with resources.path("pyaerocom.data", "coords.ini") as path:
+    #     _coords_info_file = str(path)
 
     # these are searched in preferred order both in root and home
     _DB_SEARCH_SUBDIRS = {}

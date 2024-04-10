@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from configparser import ConfigParser
 
-import const
+from . import const
 from ._lowlevel_helpers import BrowseDict
-import resources
+from . import resources
 from .exceptions import VarNotAvailableError
 from .ebas_file_index import EbasSQLRequest
 
@@ -90,7 +90,7 @@ class EbasVarInfo(BrowseDict):
         """
 
         conf_reader = ConfigParser()
-        with resources.path("pyaerocom.data", "ebas_config.ini") as path:
+        with resources.path("pyaro_readers.nilupmfebas", "ebas_config.ini") as path:
             conf_reader.read(path)
         return conf_reader
 

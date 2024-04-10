@@ -9,11 +9,11 @@ from fnmatch import fnmatch
 
 import numpy as np
 
-from pyaerocom import const
-from pyaerocom._lowlevel_helpers import list_to_shortstr
-from pyaerocom.exceptions import DataSourceError
-from pyaerocom.helpers import varlist_aerocom
-from pyaerocom.io.helpers import get_obsnetwork_dir
+from . import const
+from ._lowlevel_helpers import list_to_shortstr
+from .exceptions import DataSourceError
+from .helpers import varlist_aerocom
+from .io_helpers import get_obsnetwork_dir
 
 logger = logging.getLogger(__name__)
 

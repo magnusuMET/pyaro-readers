@@ -3,8 +3,8 @@ from configparser import ConfigParser
 
 import numpy as np
 
-from _lowlevel_helpers import BrowseDict
-import resources
+from ._lowlevel_helpers import BrowseDict
+from . import resources
 
 logger = logging.getLogger(__name__)
 

@@ -12,8 +12,8 @@ from time import time
 
 import simplejson as json
 
-import const
-import resources
+from . import const
+from . import resources
 from .exceptions import VariableDefinitionError, VarNotAvailableError
 from .aerocom_browser import AerocomBrowser
 

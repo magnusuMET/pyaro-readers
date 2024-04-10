@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import const
+from . import const
 from ._lowlevel_helpers import merge_dicts
 from .combine_vardata_ungridded import combine_vardata_ungridded
 from .exceptions import (

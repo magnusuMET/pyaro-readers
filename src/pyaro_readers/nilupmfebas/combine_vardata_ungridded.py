@@ -1,6 +1,6 @@
 import numpy as np
 
-from _lowlevel_helpers import invalid_input_err_str
+from ._lowlevel_helpers import invalid_input_err_str
 from .colocation import _colocate_site_data_helper
 from .geodesy import find_coord_indices_within_distance
 from .helpers import sort_ts_types

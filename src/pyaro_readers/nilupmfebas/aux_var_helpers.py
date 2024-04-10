@@ -1,7 +1,7 @@
 import cf_units
 import numpy as np
 
-import const
+from . import const
 from .variable_helpers import get_variable
 
 

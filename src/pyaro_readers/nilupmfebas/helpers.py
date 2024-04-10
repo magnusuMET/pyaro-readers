@@ -17,7 +17,7 @@ import pandas as pd
 import xarray as xr
 from cf_units import Unit
 
-import const
+from . import const
 from ._warnings import ignore_warnings
 from .exceptions import (
     DataCoverageError,

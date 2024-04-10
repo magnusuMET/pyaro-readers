@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-import const
+from . import const
 from ._lowlevel_helpers import BrowseDict, dict_to_str, list_to_shortstr, merge_dicts
 from .exceptions import (
     CoordinateError,

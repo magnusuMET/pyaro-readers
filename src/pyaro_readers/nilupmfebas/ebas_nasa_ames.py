@@ -12,7 +12,7 @@ from io import StringIO
 
 import numpy as np
 
-import const
+from . import const
 from ._lowlevel_helpers import dict_to_str, str_underline
 from .exceptions import NasaAmesReadError, TimeZoneError
 

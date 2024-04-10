@@ -3,7 +3,7 @@ import logging
 import os
 import re
 
-import const
+from . import const
 from ._lowlevel_helpers import BrowseDict
 from .exceptions import DataSearchError
 
