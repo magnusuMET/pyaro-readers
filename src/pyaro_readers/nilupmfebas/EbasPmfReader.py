@@ -43,10 +43,12 @@ from pyaro.timeseries import (
     Station,
 )
 from .readungriddedbase import ReadUngriddedBase
-from .stationdata import StationData
+
+# from .stationdata import StationData
 from tqdm import tqdm
-from .tstype import TsType
-from .ungriddeddata import UngriddedData
+
+# from .tstype import TsType
+# from .ungriddeddata import UngriddedData
 from .units_helpers import get_unit_conversion_fac
 
 from .exceptions import (
@@ -224,7 +226,8 @@ class ReadEbas(ReadUngriddedBase):
     """
 
     #: version log of this class (for caching)
-    __version__ = "0.52_" + ReadUngriddedBase.__baseversion__
+    # __version__ = "0.52_" + ReadUngriddedBase.__baseversion__
+    __version__ = "0.52_"
 
     #: Name of dataset (OBS_ID)
     DATA_ID = const.EBAS_MULTICOLUMN_NAME
@@ -1472,7 +1475,8 @@ class ReadEbas(ReadUngriddedBase):
         # find columns in NASA Ames file for variables that are to be read
         var_cols = self.find_var_cols(vars_to_read=vars_to_read, loaded_nasa_ames=file)
         # create empty data object (is dictionary with extended functionality)
-        data_out = StationData()
+        # data_out = StationData()
+        data_out = dict
 
         data_out = self._add_meta(data_out, file)
 
@@ -1552,71 +1556,71 @@ class ReadEbas(ReadUngriddedBase):
 
         return data_out
 
-    def _check_correct_freq(self, file, freq_ebas):
-        # ToDo: should go into EbasNasaAmesFile class
-        dts = (file.stop_meas - file.start_meas).astype(int)
-        if np.min(dts) < 0:
-            raise TemporalResolutionError(
-                "Nasa Ames file contains neg. meas periods..."
-            )
-        counts = np.bincount(dts)
-        most_common_dt = np.argmax(counts)
-        # frequency associated based on resolution code
-        if TsType(freq_ebas).check_match_total_seconds(most_common_dt):
-            return freq_ebas
+    # def _check_correct_freq(self, file, freq_ebas):
+    #     # ToDo: should go into EbasNasaAmesFile class
+    #     dts = (file.stop_meas - file.start_meas).astype(int)
+    #     if np.min(dts) < 0:
+    #         raise TemporalResolutionError(
+    #             "Nasa Ames file contains neg. meas periods..."
+    #         )
+    #     counts = np.bincount(dts)
+    #     most_common_dt = np.argmax(counts)
+    #     # frequency associated based on resolution code
+    #     if TsType(freq_ebas).check_match_total_seconds(most_common_dt):
+    #         return freq_ebas
+    #
+    #     logger.warning(
+    #         f"Detected wrong frequency {freq_ebas}. Trying to infer the correct frequency..."
+    #     )
+    #     try:
+    #         freq = TsType.from_total_seconds(most_common_dt)
+    #         return str(freq)
+    #     except TemporalResolutionError:
+    #         raise TemporalResolutionError(
+    #             f"Failed to derive correct sampling frequency in {file.file_name}. "
+    #             f"Most common meas period (stop_meas - start_meas) in file is "
+    #             f"{most_common_dt}s and does not "
+    #             f"correspond to any of the supported frequencies {TsType.VALID_ITER} "
+    #             f"or permutations of those frequencies within the allowed ranges "
+    #             f"{TsType.TS_MAX_VALS}"
+    #         )
 
-        logger.warning(
-            f"Detected wrong frequency {freq_ebas}. Trying to infer the correct frequency..."
-        )
-        try:
-            freq = TsType.from_total_seconds(most_common_dt)
-            return str(freq)
-        except TemporalResolutionError:
-            raise TemporalResolutionError(
-                f"Failed to derive correct sampling frequency in {file.file_name}. "
-                f"Most common meas period (stop_meas - start_meas) in file is "
-                f"{most_common_dt}s and does not "
-                f"correspond to any of the supported frequencies {TsType.VALID_ITER} "
-                f"or permutations of those frequencies within the allowed ranges "
-                f"{TsType.TS_MAX_VALS}"
-            )
+    # def _flag_incorrect_frequencies(self, filedata):
+    #     # time diffs in units of s for each measurement
+    #     dt = (filedata.stop_meas - filedata.start_meas).astype(float)
+    #     # frequency in file (supposedly)
+    #     tst = TsType(filedata.ts_type)
+    #     # number of seconds in period (e.g. 86400 for ts_type daily)
+    #     numsecs = tst.num_secs
+    #     # tolerance in seconds in period (5% of numsecs, as of 13.1.2021)
+    #     tolsecs = tst.tol_secs
+    #
+    #     diffarr = dt - numsecs
+    #
+    #     invalid = np.logical_or(diffarr < -tolsecs, diffarr > tolsecs)
+    #
+    #     frac_valid = np.sum(~invalid) / len(invalid)
+    #
+    #     num = len(filedata["start_meas"])
+    #     for var in filedata.var_info:
+    #         opts = self.get_read_opts(var)
+    #         if opts.freq_min_cov > frac_valid:
+    #             raise TemporalSamplingError(
+    #                 f"Only {frac_valid * 100:.2f}% of measuerements are in "
+    #                 f"{tst} resolution. Minimum requirement for {var} is "
+    #                 f"{opts.freq_min_cov * 100:.2f}%"
+    #             )
+    #         if not var in filedata.data_flagged:
+    #             filedata.data_flagged[var] = np.zeros(num).astype(bool)
+    #         filedata.data_flagged[var][invalid] = True
+    #     return filedata
 
-    def _flag_incorrect_frequencies(self, filedata):
-        # time diffs in units of s for each measurement
-        dt = (filedata.stop_meas - filedata.start_meas).astype(float)
-        # frequency in file (supposedly)
-        tst = TsType(filedata.ts_type)
-        # number of seconds in period (e.g. 86400 for ts_type daily)
-        numsecs = tst.num_secs
-        # tolerance in seconds in period (5% of numsecs, as of 13.1.2021)
-        tolsecs = tst.tol_secs
-
-        diffarr = dt - numsecs
-
-        invalid = np.logical_or(diffarr < -tolsecs, diffarr > tolsecs)
-
-        frac_valid = np.sum(~invalid) / len(invalid)
-
-        num = len(filedata["start_meas"])
-        for var in filedata.var_info:
-            opts = self.get_read_opts(var)
-            if opts.freq_min_cov > frac_valid:
-                raise TemporalSamplingError(
-                    f"Only {frac_valid * 100:.2f}% of measuerements are in "
-                    f"{tst} resolution. Minimum requirement for {var} is "
-                    f"{opts.freq_min_cov * 100:.2f}%"
-                )
-            if not var in filedata.data_flagged:
-                filedata.data_flagged[var] = np.zeros(num).astype(bool)
-            filedata.data_flagged[var][invalid] = True
-        return filedata
-
-    def _convert_varunit_stationdata(self, sd, var):
-        from_unit = sd.var_info[var]["units"]
-        to_unit = self.var_info(var)["units"]
-        if from_unit != to_unit:
-            sd.convert_unit(var, to_unit)
-        return sd
+    # def _convert_varunit_stationdata(self, sd, var):
+    #     from_unit = sd.var_info[var]["units"]
+    #     to_unit = self.var_info(var)["units"]
+    #     if from_unit != to_unit:
+    #         sd.convert_unit(var, to_unit)
+    #     return sd
 
     def compute_additional_vars(self, data, vars_to_compute):
         """Compute additional variables and put into station data
