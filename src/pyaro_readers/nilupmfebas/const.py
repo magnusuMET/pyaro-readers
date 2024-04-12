@@ -1,23 +1,23 @@
 import getpass
 import logging
 import os
-from configparser import ConfigParser
-from pathlib import Path
-
-import numpy as np
-
-from . import obs_io
-from ._lowlevel_helpers import (
-    check_dir_access,
-    check_write_access,
-    chk_make_subdir,
-    list_to_shortstr,
-)
-from . import resources
-from .exceptions import DataIdError, DataSourceError
-from .grid_io import GridIO
-from .region_defs import ALL_REGION_NAME, HTAP_REGIONS, OLD_AEROCOM_REGIONS
-from .varcollection import VarCollection
+# from configparser import ConfigParser
+# from pathlib import Path
+#
+# import numpy as np
+#
+# from . import obs_io
+# from ._lowlevel_helpers import (
+#     check_dir_access,
+#     check_write_access,
+#     chk_make_subdir,
+#     list_to_shortstr,
+# )
+# from . import resources
+# from .exceptions import DataIdError, DataSourceError
+# from .grid_io import GridIO
+# from .region_defs import ALL_REGION_NAME, HTAP_REGIONS, OLD_AEROCOM_REGIONS
+# from .varcollection import VarCollection
 
 logger = logging.getLogger(__name__)
 
@@ -29,149 +29,147 @@ EBAS_DB_LOCAL_CACHE = True
 
 #: standard names for coordinates
 STANDARD_COORD_NAMES = ["latitude", "longitude", "altitude"]
-GRID_IO = GridIO()
+# GRID_IO = GridIO()
 
 
-"""Class containing relevant paths for read and write routines
-
-A loaded instance of this class is created on import of pyaerocom and
-can be accessed via `pyaerocom.const`.
-
-TODO: provide more information
-"""
-
-# NAMES
-# default names of the different obs networks
-# might get overwritten from paths.ini see func read_config
-
-#: ICP Forests
-ICPFORESTS_NAME = "ICPFORESTS"
-
-#: Aeronet Sun V2 access names
-AERONET_SUN_V2L15_AOD_DAILY_NAME = "AeronetSunV2Lev1.5.daily"
-AERONET_SUN_V2L15_AOD_ALL_POINTS_NAME = "AeronetSun_2.0_NRT"
-AERONET_SUN_V2L2_AOD_DAILY_NAME = "AeronetSunV2Lev2.daily"
-AERONET_SUN_V2L2_AOD_ALL_POINTS_NAME = "AeronetSunV2Lev2.AP"
-
-#: Aeronet SDA V2 access names
-AERONET_SUN_V2L2_SDA_DAILY_NAME = "AeronetSDAV2Lev2.daily"
-AERONET_SUN_V2L2_SDA_ALL_POINTS_NAME = "AeronetSDAV2Lev2.AP"
-
-# Aeronet V2 inversion products
-AERONET_INV_V2L15_DAILY_NAME = "AeronetInvV2Lev1.5.daily"
-AERONET_INV_V2L15_ALL_POINTS_NAME = "AeronetInvV2Lev1.5.AP"
-AERONET_INV_V2L2_DAILY_NAME = "AeronetInvV2Lev2.daily"
-AERONET_INV_V2L2_ALL_POINTS_NAME = "AeronetInvV2Lev2.AP"
-
-#: Aeronet Sun V3 access names
-AERONET_SUN_V3L15_AOD_DAILY_NAME = "AeronetSunV3Lev1.5.daily"
-AERONET_SUN_V3L15_AOD_ALL_POINTS_NAME = "AeronetSunV3Lev1.5.AP"
-AERONET_SUN_V3L2_AOD_DAILY_NAME = "AeronetSunV3Lev2.daily"
-AERONET_SUN_V3L2_AOD_ALL_POINTS_NAME = "AeronetSunV3Lev2.AP"
-
-#: Aeronet SDA V3 access names
-AERONET_SUN_V3L15_SDA_DAILY_NAME = "AeronetSDAV3Lev1.5.daily"
-AERONET_SUN_V3L15_SDA_ALL_POINTS_NAME = "AeronetSDAV3Lev1.5.AP"
-AERONET_SUN_V3L2_SDA_DAILY_NAME = "AeronetSDAV3Lev2.daily"
-AERONET_SUN_V3L2_SDA_ALL_POINTS_NAME = "AeronetSDAV3Lev2.AP"
-
-#: Aeronet V3 inversions
-AERONET_INV_V3L15_DAILY_NAME = "AeronetInvV3Lev1.5.daily"
-AERONET_INV_V3L2_DAILY_NAME = "AeronetInvV3Lev2.daily"
-
-#: EBAS name
-EBAS_MULTICOLUMN_NAME = "EBASMC"
-
-#: EEA nmea
-EEA_NAME = "EEAAQeRep"
-
-#: EEA.NRT name
-EEA_NRT_NAME = "EEAAQeRep.NRT"
-
-#: EEAV2 name
-EEA_V2_NAME = "EEAAQeRep.v2"
-
-#: Earlinet access name;
-EARLINET_NAME = "EARLINET"
-
-#: GAW TAD subset aas et al paper
-GAWTADSUBSETAASETAL_NAME = "GAWTADsubsetAasEtAl"
-
-#: DMS
-DMS_AMS_CVO_NAME = "DMS_AMS_CVO"
-
-#: MEP name
-MEP_NAME = "MEP"
-
-#: ICOS name
-ICOS_NAME = "ICOS"
-
-#: boolean specifying wheter EBAS DB is copied to local cache for faster
-#: access, defaults to True
-EBAS_DB_LOCAL_CACHE = True
-
-#: Lowest possible year in data
-MIN_YEAR = 0
-#: Highest possible year in data
-MAX_YEAR = 20000
-
-#: standard names for coordinates
-STANDARD_COORD_NAMES = ["latitude", "longitude", "altitude"]
-#: Information specifying default vertical grid for post processing of
-#: profile data. The values are in units of m.
-DEFAULT_VERT_GRID_DEF = dict(lower=0, upper=15000, step=250)
-#: maximum allowed RH to be considered dry
-RH_MAX_PERCENT_DRY = 40
-
-DEFAULT_REG_FILTER = f"{ALL_REGION_NAME}-wMOUNTAINS"
-
-#: Time resample strategies for certain cominations, first level refers
-#: to TO, second to FROM and values are minimum number of observations
-OBS_MIN_NUM_RESAMPLE = dict(
-    yearly=dict(monthly=3),
-    monthly=dict(daily=7),
-    daily=dict(hourly=6),
-    hourly=dict(minutely=15),
-)
-
-#: This boolean can be used to enable / disable the former (i.e. use
-#: available wavelengths of variable in a certain range around variable
-#: wavelength).
-OBS_ALLOW_ALT_WAVELENGTHS = obs_io.OBS_ALLOW_ALT_WAVELENGTHS
-
-#: Wavelength tolerance for observations imports
-OBS_WAVELENGTH_TOL_NM = obs_io.OBS_WAVELENGTH_TOL_NM
-
-CLIM_START = 2005
-CLIM_STOP = 2015
-CLIM_FREQ = "daily"
-CLIM_RESAMPLE_HOW = "mean"  # median, ...
-# as a function of climatological frequency
-CLIM_MIN_COUNT = dict(
-    daily=30,
-    monthly=5,  # at least 30 daily measurements in each month over whole period
-)  # analogue to daily ...
-
-# names for the satellite data sets
-SENTINEL5P_NAME = "Sentinel5P"
-AEOLUS_NAME = "AeolusL2A"
-
-OLD_AEROCOM_REGIONS = OLD_AEROCOM_REGIONS
-
-URL_HTAP_MASKS = "https://pyaerocom.met.no/pyaerocom-suppl/htap_masks/"
-
-HTAP_REGIONS = HTAP_REGIONS
-
-RM_CACHE_OUTDATED = True
-
-#: Name of the file containing the revision string of an obs data network
-REVISION_FILE = "Revision.txt"
-
-#: timeout to check if one of the supported server locations can be
-#: accessed
-SERVER_CHECK_TIMEOUT = 1  # s
-
-_outhomename = "MyPyaerocom"
+# """Class containing relevant paths for read and write routines
+#
+# A loaded instance of this class is created on import of pyaerocom and
+# can be accessed via `pyaerocom.const`.
+#
+# TODO: provide more information
+# """
+#
+# # NAMES
+# # default names of the different obs networks
+# # might get overwritten from paths.ini see func read_config
+#
+# #: ICP Forests
+# ICPFORESTS_NAME = "ICPFORESTS"
+#
+# #: Aeronet Sun V2 access names
+# AERONET_SUN_V2L15_AOD_DAILY_NAME = "AeronetSunV2Lev1.5.daily"
+# AERONET_SUN_V2L15_AOD_ALL_POINTS_NAME = "AeronetSun_2.0_NRT"
+# AERONET_SUN_V2L2_AOD_DAILY_NAME = "AeronetSunV2Lev2.daily"
+# AERONET_SUN_V2L2_AOD_ALL_POINTS_NAME = "AeronetSunV2Lev2.AP"
+#
+# #: Aeronet SDA V2 access names
+# AERONET_SUN_V2L2_SDA_DAILY_NAME = "AeronetSDAV2Lev2.daily"
+# AERONET_SUN_V2L2_SDA_ALL_POINTS_NAME = "AeronetSDAV2Lev2.AP"
+#
+# # Aeronet V2 inversion products
+# AERONET_INV_V2L15_DAILY_NAME = "AeronetInvV2Lev1.5.daily"
+# AERONET_INV_V2L15_ALL_POINTS_NAME = "AeronetInvV2Lev1.5.AP"
+# AERONET_INV_V2L2_DAILY_NAME = "AeronetInvV2Lev2.daily"
+# AERONET_INV_V2L2_ALL_POINTS_NAME = "AeronetInvV2Lev2.AP"
+#
+# #: Aeronet Sun V3 access names
+# AERONET_SUN_V3L15_AOD_DAILY_NAME = "AeronetSunV3Lev1.5.daily"
+# AERONET_SUN_V3L15_AOD_ALL_POINTS_NAME = "AeronetSunV3Lev1.5.AP"
+# AERONET_SUN_V3L2_AOD_DAILY_NAME = "AeronetSunV3Lev2.daily"
+# AERONET_SUN_V3L2_AOD_ALL_POINTS_NAME = "AeronetSunV3Lev2.AP"
+#
+# #: Aeronet SDA V3 access names
+# AERONET_SUN_V3L15_SDA_DAILY_NAME = "AeronetSDAV3Lev1.5.daily"
+# AERONET_SUN_V3L15_SDA_ALL_POINTS_NAME = "AeronetSDAV3Lev1.5.AP"
+# AERONET_SUN_V3L2_SDA_DAILY_NAME = "AeronetSDAV3Lev2.daily"
+# AERONET_SUN_V3L2_SDA_ALL_POINTS_NAME = "AeronetSDAV3Lev2.AP"
+#
+# #: Aeronet V3 inversions
+# AERONET_INV_V3L15_DAILY_NAME = "AeronetInvV3Lev1.5.daily"
+# AERONET_INV_V3L2_DAILY_NAME = "AeronetInvV3Lev2.daily"
+#
+# #: EBAS name
+# # EBAS_MULTICOLUMN_NAME = "EBASMC"
+#
+# #: EEA nmea
+# EEA_NAME = "EEAAQeRep"
+#
+# #: EEA.NRT name
+# EEA_NRT_NAME = "EEAAQeRep.NRT"
+#
+# #: EEAV2 name
+# EEA_V2_NAME = "EEAAQeRep.v2"
+#
+# #: Earlinet access name;
+# EARLINET_NAME = "EARLINET"
+#
+# #: GAW TAD subset aas et al paper
+# GAWTADSUBSETAASETAL_NAME = "GAWTADsubsetAasEtAl"
+#
+# #: DMS
+# DMS_AMS_CVO_NAME = "DMS_AMS_CVO"
+#
+# #: MEP name
+# MEP_NAME = "MEP"
+#
+# #: ICOS name
+# ICOS_NAME = "ICOS"
+#
+# #: boolean specifying wheter EBAS DB is copied to local cache for faster
+# #: access, defaults to True
+# # EBAS_DB_LOCAL_CACHE = True
+#
+# #: Lowest possible year in data
+# MIN_YEAR = 0
+# #: Highest possible year in data
+# MAX_YEAR = 20000
+#
+# #: standard names for coordinates
+# # STANDARD_COORD_NAMES = ["latitude", "longitude", "altitude"]
+# #: Information specifying default vertical grid for post processing of
+# #: profile data. The values are in units of m.
+# DEFAULT_VERT_GRID_DEF = dict(lower=0, upper=15000, step=250)
+# #: maximum allowed RH to be considered dry
+# RH_MAX_PERCENT_DRY = 40
+#
+# # DEFAULT_REG_FILTER = f"{ALL_REGION_NAME}-wMOUNTAINS"
+#
+# #: Time resample strategies for certain cominations, first level refers
+# #: to TO, second to FROM and values are minimum number of observations
+# OBS_MIN_NUM_RESAMPLE = dict(
+#     yearly=dict(monthly=3),
+#     monthly=dict(daily=7),
+#     daily=dict(hourly=6),
+#     hourly=dict(minutely=15),
+# )
+#
+# #: This boolean can be used to enable / disable the former (i.e. use
+# #: available wavelengths of variable in a certain range around variable
+# #: wavelength).
+# # OBS_ALLOW_ALT_WAVELENGTHS = obs_io.OBS_ALLOW_ALT_WAVELENGTHS
+#
+# #: Wavelength tolerance for observations imports
+# # OBS_WAVELENGTH_TOL_NM = obs_io.OBS_WAVELENGTH_TOL_NM
+#
+# CLIM_START = 2005
+# CLIM_STOP = 2015
+# CLIM_FREQ = "daily"
+# CLIM_RESAMPLE_HOW = "mean"  # median, ...
+# # as a function of climatological frequency
+# CLIM_MIN_COUNT = dict(
+#     daily=30,
+#     monthly=5,  # at least 30 daily measurements in each month over whole period
+# )  # analogue to daily ...
+#
+# # names for the satellite data sets
+# SENTINEL5P_NAME = "Sentinel5P"
+# AEOLUS_NAME = "AeolusL2A"
+#
+# URL_HTAP_MASKS = "https://pyaerocom.met.no/pyaerocom-suppl/htap_masks/"
+#
+# # HTAP_REGIONS = HTAP_REGIONS
+#
+# RM_CACHE_OUTDATED = True
+#
+# #: Name of the file containing the revision string of an obs data network
+# REVISION_FILE = "Revision.txt"
+#
+# #: timeout to check if one of the supported server locations can be
+# #: accessed
+# SERVER_CHECK_TIMEOUT = 1  # s
+#
+# _outhomename = "MyPyaerocom"
 
 # with resources.path("pyaerocom.data", "paths.ini") as path:
 #     _config_ini_lustre = str(path)
