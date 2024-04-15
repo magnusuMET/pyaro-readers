@@ -15,6 +15,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 FILL_COUNTRY_FLAG = False
+FILE_MASK = "*.nas"
 
 
 class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
@@ -24,6 +25,7 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         filters=[],
         tqdm_desc: [str, None] = None,
         ts_type: str = "daily",
+        filemask: str = FILE_MASK,
     ):
         self._stations = {}
         self._data = {}  # var -> {data-array}
@@ -31,80 +33,27 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._header = []
         self._opts = {"default": ReadEbasOptions()}
 
-        if Path(filename).is_dir():
+        realpath = Path(filename).resolve()
+
+        if Path(realpath).is_dir():
             # search directory for files
-            pass
-        elif Path(filename).is_file():
-            self._file_dummy = self.read_file(filename)
-            matrix = self._file_dummy.meta["matrix"]
-            if self._file_dummy.meta["component"] == "":
-                # multicolumn file: ebas var names come from self._file_dummy.col_names_vars
-                unique_vars = list(set(self._file_dummy.col_names_vars))
-                add_meta_flag = True
-                for var_idx in range(len(self._file_dummy.var_defs)):
-                    # continue if the variable is not an actual data variable (but e.g. time)
-                    if not self._file_dummy.var_defs[var_idx].is_var:
-                        continue
-                    # continue if the statistcs is to be ignored
-                    if (
-                        self._file_dummy.var_defs[var_idx].statistics
-                        in self._opts["default"].ignore_statistics
-                    ):
-                        continue
-                    var_name = f"{matrix}_{self._file_dummy.var_defs[var_idx].name}"
-                    if add_meta_flag:
-                        stat_name = self._file_dummy.meta["station_code"]
-                        country = self._file_dummy.meta["station_code"][0:2]
+            files = list(realpath.glob(filemask))
+            bar = tqdm(desc=tqdm_desc, total=len(files))
 
-                        lat = float(self._file_dummy.meta["station_latitude"])
-                        lon = float(self._file_dummy.meta["station_longitude"])
-                        alt = float(
-                            self._file_dummy.meta["station_altitude"].split(" ")[0]
-                        )
+            for _ridx, file in enumerate(files):
+                # print(file)
+                bar.update(1)
+                self.read_file(file)
+            bar.close()
+        elif Path(realpath).is_file():
+            self.read_file(realpath)
 
-                        self._stations[stat_name] = Station(
-                            {
-                                "station": stat_name,
-                                "longitude": lon,
-                                "latitude": lat,
-                                "altitude": alt,
-                                "country": country,
-                                "url": "",
-                                "long_name": stat_name,
-                            }
-                        )
-                        add_meta_flag = False
-
-                    # we might want to put a CF compliant unit here
-                    self._data[var_name] = NpStructuredData(
-                        var_name, self._file_dummy.meta["unit"]
-                    )
-                    # now add ts after ts
-                    for t_idx, ts in enumerate(self._file_dummy.start_meas):
-                        self._data[var_name].append(
-                            float(self._file_dummy.data[t_idx, var_idx]),  # value
-                            stat_name,
-                            lat,
-                            lon,
-                            alt,
-                            ts,
-                            self._file_dummy.stop_meas[t_idx],
-                            Flag.VALID,
-                            np.nan,
-                        )
-                        # print(self._file_dummy.stop_meas[t_idx])
-                        pass
-
-                pass
-            else:
-                # single column file
-                pass
         else:
             # filename is something else
             # Error
             pass
 
-    def read_file(
+    def read_file_basic(
         self,
         filename,
     ):
@@ -123,6 +72,74 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         data_out = EbasNasaAmesFile(filename)
 
         return data_out
+
+    def read_file(self, filename):
+        """Read EBAS NASA Ames file and put the data in the object"""
+
+        self._file_dummy = self.read_file_basic(filename)
+        matrix = self._file_dummy.meta["matrix"]
+        if self._file_dummy.meta["component"] == "":
+            # multicolumn file: ebas var names come from self._file_dummy.col_names_vars
+            # unique_vars = list(set(self._file_dummy.col_names_vars))
+            add_meta_flag = True
+            for var_idx in range(len(self._file_dummy.var_defs)):
+                # continue if the variable is not an actual data variable (but e.g. time)
+                if not self._file_dummy.var_defs[var_idx].is_var:
+                    continue
+                # continue if the statistcs is to be ignored
+                try:
+                    if (
+                        self._file_dummy.var_defs[var_idx].statistics
+                        in self._opts["default"].ignore_statistics
+                    ):
+                        continue
+                except KeyError:
+                    pass
+
+                var_name = f"{matrix}#{self._file_dummy.var_defs[var_idx].name}"
+                if add_meta_flag:
+                    stat_name = self._file_dummy.meta["station_code"]
+                    country = self._file_dummy.meta["station_code"][0:2]
+
+                    lat = float(self._file_dummy.meta["station_latitude"])
+                    lon = float(self._file_dummy.meta["station_longitude"])
+                    alt = float(self._file_dummy.meta["station_altitude"].split(" ")[0])
+
+                    self._stations[stat_name] = Station(
+                        {
+                            "station": stat_name,
+                            "longitude": lon,
+                            "latitude": lat,
+                            "altitude": alt,
+                            "country": country,
+                            "url": "",
+                            "long_name": stat_name,
+                        }
+                    )
+                    add_meta_flag = False
+
+                # we might want to put a CF compliant unit here
+                self._data[var_name] = NpStructuredData(
+                    var_name, self._file_dummy.meta["unit"]
+                )
+                # now add ts after ts
+                for t_idx, ts in enumerate(self._file_dummy.start_meas):
+                    self._data[var_name].append(
+                        float(self._file_dummy.data[t_idx, var_idx]),  # value
+                        stat_name,
+                        lat,
+                        lon,
+                        alt,
+                        ts,
+                        self._file_dummy.stop_meas[t_idx],
+                        Flag.VALID,
+                        np.nan,
+                    )
+                    # print(self._file_dummy.stop_meas[t_idx])
+                    # pass
+        else:
+            # single column file
+            pass
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
