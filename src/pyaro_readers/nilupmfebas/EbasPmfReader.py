@@ -11,6 +11,7 @@ from pyaro.timeseries import (
 from tqdm import tqdm
 
 from pathlib import Path
+import cf_units
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._set_filters(filters)
         self._header = []
         self._opts = {"default": ReadEbasOptions()}
+        self._variables = {}
 
         realpath = Path(filename).resolve()
 
@@ -41,12 +43,12 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             bar = tqdm(desc=tqdm_desc, total=len(files))
 
             for _ridx, file in enumerate(files):
-                # print(file)
                 bar.update(1)
                 self.read_file(file)
             bar.close()
         elif Path(realpath).is_file():
             self.read_file(realpath)
+            # print(realpath)
 
         else:
             # filename is something else
@@ -97,8 +99,21 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     pass
 
                 var_name = f"{matrix}#{self._file_dummy.var_defs[var_idx].name}"
-                if add_meta_flag:
-                    stat_name = self._file_dummy.meta["station_code"]
+                if var_name not in self._variables:
+                    self._variables[var_name] = (
+                        var_name,
+                        self._file_dummy.meta["unit"],
+                    )
+                else:
+                    var_name_ext = f"{self._variables[var_name]}0"
+                    self._variables[var_name] = (
+                        var_name_ext,
+                        self._file_dummy.meta["unit"],
+                    )
+
+                var_unit = self._file_dummy.var_defs[var_idx].unit
+                stat_name = self._file_dummy.meta["station_code"]
+                if stat_name not in self._stations:
                     country = self._file_dummy.meta["station_code"][0:2]
 
                     lat = float(self._file_dummy.meta["station_latitude"])
@@ -119,9 +134,8 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     add_meta_flag = False
 
                 # we might want to put a CF compliant unit here
-                self._data[var_name] = NpStructuredData(
-                    var_name, self._file_dummy.meta["unit"]
-                )
+                self._data[var_name] = NpStructuredData(var_name, var_unit)
+                # self._data[var_name] = []
                 # now add ts after ts
                 for t_idx, ts in enumerate(self._file_dummy.start_meas):
                     self._data[var_name].append(

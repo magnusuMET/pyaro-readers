@@ -33,6 +33,11 @@ The MSC-W database contains the EBAS database for 1990-2021 and the EEA_Airquip 
 contain already hourly data if enough hours have been measured. Therefore, `resolution` is a
 required parameter.
 
+### nilupmfebas: EBAS format (Nasa-Ames)
+Reader for random EBAS data in NASA-AMES format. This reader is tested only with PMF data provided by
+NILU, but should in principle able to read any random text file in EBAS NASA-AMES.
+The variables provided contain in EBAS terms a combination of matrix and component with a number sign (#)
+as seperator (e.g. `pm10_pm25#total_carbon` or `pm10#organic_carbon` or `pm10#galactosan`)
 
 ## Usage
 ### aeronetsunreader
@@ -106,29 +111,38 @@ with pyaro.open_timeseries(
     data.values
 
 ```
-
-
-### geocoder_reverse_natural_earth
-geocoder_reverse_natural_earth is small helper to identify country codes for obs networks that don't mention the
-countrycode of a station in their location data
+### nilupmfebas
 ```python
-from geocoder_reverse_natural_earth import (
-    Geocoder_Reverse_NE,
-    Geocoder_Reverse_Exception,
-)
-geo = Geocoder_Reverse_NE()
-print(geo.lookup(60, 10)["ISO_A2_EH"])
-lat = 78.2361926
-lon = 15.3692614
-try:
-    geo.lookup(lat, lon)
-except Geocoder_Reverse_Exception as grex:
-    dummy = geo.lookup_nearest(lat, lon)
-    if dummy is None:
-        print(f"error: {lat},{lon}")
-    else:
-        print(dummy["ISO_A2_EH"])
+import pyaro
+TEST_URL = "/home/jang/data/Python3/pyaro-readers/tests/testdata/PMF_EBAS/NO0042G.20171109070000.20220406124026.high_vol_sampler..pm10.4mo.1w.NO01L_hvs_week_no42_pm10.NO01L_NILU_sunset_002.lev2.nas"
+TEST_URL = "/home/jang/data/Python3/pyaro-readers/tests/testdata/PMF_EBAS/NO0042G.20171109070000.20220406124026.high_vol_sampler..pm10.4mo.1w.NO01L_hvs_week_no42_pm10.NO01L_NILU_sunset_002.lev2.nas"
 
+def main():
+    with pyaro.open_timeseries(
+        'nilupmfebas', TEST_URL, filters=[]
+    ) as ts:
+        variables = ts.variables()
+        for var in variables:
 
+            data = ts.data(var)
+            print(f"var:{var} ; unit:{data.units}")
+            # stations
+            print(set(data.stations))
+            # start_times
+            print(data.start_times)
+            for idx, time in enumerate(data.start_times):
+                print(f"{time}_{data.values[idx]}")
+
+            # stop_times
+            data.end_times
+            # latitudes
+            data.latitudes
+            # longitudes
+            data.longitudes
+            # altitudes
+            data.altitudes
+            # values
+            data.values
 
 ```
+
