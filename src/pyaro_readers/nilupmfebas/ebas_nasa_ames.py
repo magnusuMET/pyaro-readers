@@ -635,7 +635,15 @@ class EbasNasaAmesFile(NasaAmesHeader):
         IN_DATA = False
         data = []
         self.file = nasa_ames_file
-        for line in open(nasa_ames_file):
+        try:
+            lines = open(self.file).readlines()
+        except UnicodeDecodeError:
+            try:
+                lines = open(self.file, encoding="latin_1").readlines()
+            except UnicodeDecodeError:
+                return
+
+        for line in lines:
             if IN_DATA:  # in data block (end of file)
                 try:
                     data.append(tuple(float(x.strip()) for x in line.strip().split()))
