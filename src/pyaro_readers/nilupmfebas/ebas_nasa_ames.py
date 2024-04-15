@@ -4,6 +4,7 @@ Pyearocom module for reading and processing of EBAS NASA Ames files
 For details on the file format see `here <https://ebas-submit.nilu.no/
 Submit-Data/Getting-started>`__
 """
+
 import csv
 import logging
 import os
@@ -636,10 +637,12 @@ class EbasNasaAmesFile(NasaAmesHeader):
         data = []
         self.file = nasa_ames_file
         try:
-            lines = open(self.file).readlines()
+            with open(self.file) as fh:
+                lines = fh.readlines()
         except UnicodeDecodeError:
             try:
-                lines = open(self.file, encoding="latin_1").readlines()
+                with open(self.file, encoding="latin_1") as fh:
+                    lines = fh.readlines()
             except UnicodeDecodeError:
                 return
 
