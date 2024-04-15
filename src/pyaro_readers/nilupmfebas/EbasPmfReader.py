@@ -21,7 +21,7 @@ FILE_MASK = "*.nas"
 class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
     def __init__(
         self,
-        filename,
+        filename: [Path, str],
         filters=[],
         tqdm_desc: [str, None] = None,
         ts_type: str = "daily",
