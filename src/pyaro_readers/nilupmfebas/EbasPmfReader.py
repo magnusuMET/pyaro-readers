@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 from pathlib import Path
 import cf_units
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,9 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
             for _ridx, file in enumerate(files):
                 bar.update(1)
+                print(file)
                 self.read_file(file)
+
             bar.close()
         elif Path(realpath).is_file():
             self.read_file(realpath)
@@ -80,62 +83,75 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
         self._file_dummy = self.read_file_basic(filename)
         matrix = self._file_dummy.meta["matrix"]
-        if self._file_dummy.meta["component"] == "":
-            # multicolumn file: ebas var names come from self._file_dummy.col_names_vars
-            # unique_vars = list(set(self._file_dummy.col_names_vars))
-            add_meta_flag = True
-            for var_idx in range(len(self._file_dummy.var_defs)):
-                # continue if the variable is not an actual data variable (but e.g. time)
-                if not self._file_dummy.var_defs[var_idx].is_var:
+        # if self._file_dummy.meta["component"] == "":
+        # multicolumn file: ebas var names come from self._file_dummy.col_names_vars
+        for var_idx in range(len(self._file_dummy.var_defs)):
+            # continue if the variable is not an actual data variable (but e.g. time)
+            if not self._file_dummy.var_defs[var_idx].is_var:
+                continue
+            # continue if the statistcs is to be ignored
+            try:
+                if (
+                    self._file_dummy.var_defs[var_idx].statistics
+                    in self._opts["default"].ignore_statistics
+                ):
                     continue
-                # continue if the statistcs is to be ignored
+            except KeyError:
+                pass
+
+            var_name = f"{matrix}#{self._file_dummy.var_defs[var_idx].name}"
+            if var_name not in self._variables:
+                self._variables[var_name] = (
+                    var_name,
+                    self._file_dummy.meta["unit"],
+                )
+            else:
+                var_name_ext = f"{self._variables[var_name]}0"
+                self._variables[var_name] = (
+                    var_name_ext,
+                    self._file_dummy.meta["unit"],
+                )
+
+            var_unit = self._file_dummy.var_defs[var_idx].unit
+            stat_name = self._file_dummy.meta["station_code"]
+            if stat_name not in self._stations:
+                country = self._file_dummy.meta["station_code"][0:2]
                 try:
-                    if (
-                        self._file_dummy.var_defs[var_idx].statistics
-                        in self._opts["default"].ignore_statistics
-                    ):
-                        continue
-                except KeyError:
-                    pass
-
-                var_name = f"{matrix}#{self._file_dummy.var_defs[var_idx].name}"
-                if var_name not in self._variables:
-                    self._variables[var_name] = (
-                        var_name,
-                        self._file_dummy.meta["unit"],
-                    )
-                else:
-                    var_name_ext = f"{self._variables[var_name]}0"
-                    self._variables[var_name] = (
-                        var_name_ext,
-                        self._file_dummy.meta["unit"],
-                    )
-
-                var_unit = self._file_dummy.var_defs[var_idx].unit
-                stat_name = self._file_dummy.meta["station_code"]
-                if stat_name not in self._stations:
-                    country = self._file_dummy.meta["station_code"][0:2]
-
                     lat = float(self._file_dummy.meta["station_latitude"])
                     lon = float(self._file_dummy.meta["station_longitude"])
-                    alt = float(self._file_dummy.meta["station_altitude"].split(" ")[0])
+                    alt_str = self._file_dummy.meta["station_altitude"]
+                except KeyError:
+                    lat = float(self._file_dummy.meta["measurement_latitude"])
+                    lon = float(self._file_dummy.meta["measurement_longitude"])
+                    alt_str = self._file_dummy.meta["measurement_altitude"]
+                try:
+                    # usually there's a blank between the value and the unit
+                    alt = float(alt_str.split(" ")[0])
+                except ValueError:
+                    # but unfortunately not always
+                    # remove all non numbers
+                    alt = re.sub(r"[^\d.-]+", "", alt_str)
 
-                    self._stations[stat_name] = Station(
-                        {
-                            "station": stat_name,
-                            "longitude": lon,
-                            "latitude": lat,
-                            "altitude": alt,
-                            "country": country,
-                            "url": "",
-                            "long_name": stat_name,
-                        }
-                    )
-                    add_meta_flag = False
+                self._stations[stat_name] = Station(
+                    {
+                        "station": stat_name,
+                        "longitude": lon,
+                        "latitude": lat,
+                        "altitude": alt,
+                        "country": country,
+                        "url": "",
+                        "long_name": stat_name,
+                    }
+                )
+                add_meta_flag = False
 
+            # put only the 1st match in the data....
+            if var_name in self._data:
+                print("ERROR!")
+            else:
                 # we might want to put a CF compliant unit here
+
                 self._data[var_name] = NpStructuredData(var_name, var_unit)
-                # self._data[var_name] = []
                 # now add ts after ts
                 for t_idx, ts in enumerate(self._file_dummy.start_meas):
                     self._data[var_name].append(
@@ -151,10 +167,7 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     )
                     # print(self._file_dummy.stop_meas[t_idx])
                     # pass
-        else:
-            # single column file
-            pass
-
+        self._file_dummy = None
         assert True
 
     def _unfiltered_data(self, varname) -> Data:
