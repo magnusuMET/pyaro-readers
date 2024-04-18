@@ -155,6 +155,8 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             # single column file
             pass
 
+        assert True
+
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
 
@@ -266,7 +268,14 @@ class ReadEbasOptions(dict):
 
     def __init__(self, **args):
         self.prefer_statistics = ["arithmetic mean", "median"]
-        self.ignore_statistics = ["percentile:15.87", "percentile:84.13", "uncertainty"]
+        # the last two are not part of the pyaerocom EBAS reader, but were needed to
+        # get to the right data columns with the NILU provided PMF data
+        self.ignore_statistics = [
+            "percentile:15.87",
+            "percentile:84.13",
+            "uncertainty",
+            "detection limit",
+        ]
 
         self.wavelength_tol_nm = 50
 
