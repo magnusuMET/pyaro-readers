@@ -33,6 +33,10 @@ The MSC-W database contains the EBAS database for 1990-2021 and the EEA_Airquip 
 contain already hourly data if enough hours have been measured. Therefore, `resolution` is a
 required parameter.
 
+### harp
+Reader for NetCDF files that follow the [HARP](http://stcorp.github.io/harp/doc/html/conventions/)
+conventions.
+
 ### nilupmfebas: EBAS format (Nasa-Ames)
 Reader for random EBAS data in NASA-AMES format. This reader is tested only with PMF data provided by
 NILU, but should in principle able to read any random text file in EBAS NASA-AMES.
@@ -109,8 +113,40 @@ with pyaro.open_timeseries(
     data.altitudes
     # values
     data.values
+```
+
+### harpreader
+```python
+import pyaro
+
+TEST_URL = "/lustre/storeB/project/aerocom/aerocom1/AEROCOM_OBSDATA/CNEMC/aggregated/sinca-surface-157-999999-001.nc"
+with pyaro.open_timeseries(
+    'harp', TEST_URL
+) as ts:
+    data = ts.data("CO_volume_mixing_ratio")
+    data.units # ppm
+    # stations
+    data.stations
+    # start_times
+    data.start_times
+    # stop_times
+    data.end_times
+    # latitudes
+    data.latitudes
+    # longitudes
+    data.longitudes
+    # altitudes
+    data.altitudes
+    # values
+    data.values
 
 ```
+
+
+### geocoder_reverse_natural_earth
+geocoder_reverse_natural_earth is small helper to identify country codes for obs networks that don't mention the
+countrycode of a station in their location data
+
 ### nilupmfebas
 ```python
 import pyaro
