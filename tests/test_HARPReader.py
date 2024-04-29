@@ -2,17 +2,46 @@ import unittest
 import pyaro
 import pyaro.timeseries
 import cfunits
+import os
 
 
 class TestHARPReader(unittest.TestCase):
     engine = "harp"
 
+    file = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "testdata",
+        "sinca-surface-157-999999-001.nc",
+    )
+
+    testdata_dir = (
+        "/lustre/storeB/project/aerocom/aerocom1/AEROCOM_OBSDATA/CNEMC/aggregated/"
+    )
+    test_vars = ["CO_volume_mixing_ratio", "PM2p5_density"]
+    test_units = ["ppm", "ug/m3"]
+
     def test_1read(self):
         with pyaro.open_timeseries(
             self.engine,
-            "tests/testdata/sinca-surface-157-999999-001.nc",
+            self.file,
+            vars_to_read=self.test_vars,
         ) as ts:
-            data = ts.data("CO_volume_mixing_ratio")
+            for _v_idx, var in enumerate(self.test_vars):
+                data = ts.data(var)
+                self.assertGreater(len(data), 10000)
+                self.assertEqual(data.units, cfunits.Units(self.test_units[_v_idx]))
 
-            self.assertGreater(len(data), 10000)
-            self.assertEqual(data.units, cfunits.Units("ppm"))
+    def test_2open_directory(self):
+        if os.path.exists(self.testdata_dir):
+            with pyaro.open_timeseries(
+                self.engine, self.testdata_dir, filters=[], vars_to_read=self.test_vars
+            ) as ts:
+                for _v_idx, var in enumerate(self.test_vars):
+                    self.assertGreaterEqual(len(ts.variables()), 2)
+                    self.assertGreaterEqual(len(ts.stations()), 7)
+        else:
+            pass
+
+
+if __name__ == "__main__":
+    unittest.main()
