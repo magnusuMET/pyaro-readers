@@ -28,8 +28,12 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
     Reader for netCDF files which follow the HARP convention.
     """
 
-    def __init__(self, file: str):
-        self._filters = []
+    def __init__(
+        self,
+        file: str,
+        filters=[],
+    ):
+        self._filters = filters
         if os.path.isfile(file):
             self._file = file
         else:
