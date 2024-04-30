@@ -12,9 +12,8 @@ import os
 import xarray as xr
 import numpy as np
 from pathlib import Path
-import re
+from tqdm import tqdm
 import cfunits
-import pyaro
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +48,16 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
         self._data = {}
         self._files = []
         self._stations = {}
+        self._vars_to_read = vars_to_read
+
+        # variable include filter comes like this
+        #{'variables': {'include': ['PM10_density']}}
+        # test for variable filter
+        if 'variables' in filters:
+            if 'include' in filters["variables"]:
+                vars_to_read = filters["variables"]["include"]
+                self._vars_to_read = vars_to_read
+                logger.info(f"applying variable include filter {vars_to_read}...")
 
         if os.path.isfile(realpath) or os.path.isdir(realpath):
             pass
@@ -61,8 +70,11 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
         else:
             self._files.append(file)
 
+        bar = tqdm(total=len(self._files))
+
         for f_idx, _file in enumerate(self._files):
             logger.info(f"Reading {_file}")
+            bar.update(1)
             self._variables = self._read_file_variables(_file)
             # initialise all variables if not done yet
             for _var in self._variables:
@@ -72,7 +84,6 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                 if vars_to_read is not None and _var not in vars_to_read:
                     logger.info(f"Skipping {_var}")
                     continue
-                print(_var)
                 if _var not in self._data:
                     units = self._variables[_var]
                     data = NpStructuredData(_var, units)
@@ -82,6 +93,7 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                     _file,
                     _var,
                 )
+        bar.close()
 
     def _read_file_variables(self, filename) -> dict[str, str]:
         """Returns a mapping of variable name to unit for the dataset.
@@ -98,7 +110,8 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
             decode_cf=False,
         ) as d:
             for vname, var in d.data_vars.items():
-                variables[vname] = cfunits.Units(var.attrs["units"])
+                if vname in self._vars_to_read:
+                    variables[vname] = cfunits.Units(var.attrs["units"])
 
         return variables
 
