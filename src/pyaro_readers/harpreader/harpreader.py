@@ -72,6 +72,7 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                 if vars_to_read is not None and _var not in vars_to_read:
                     logger.info(f"Skipping {_var}")
                     continue
+                print(_var)
                 if _var not in self._data:
                     units = self._variables[_var]
                     data = NpStructuredData(_var, units)
@@ -81,12 +82,6 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                     _file,
                     _var,
                 )
-
-    def _unfiltered_stations(self) -> dict[str, Station]:
-        pass
-
-    def close(self):
-        pass
 
     def _read_file_variables(self, filename) -> dict[str, str]:
         """Returns a mapping of variable name to unit for the dataset.
@@ -98,14 +93,14 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
 
         """
         variables = {}
-        with xr.open_dataset(filename, decode_cf=False) as d:
+        with xr.open_dataset(
+            filename,
+            decode_cf=False,
+        ) as d:
             for vname, var in d.data_vars.items():
                 variables[vname] = cfunits.Units(var.attrs["units"])
 
         return variables
-
-    def _unfiltered_data(self, varname) -> Data:
-        return self._data[varname]
 
     def _get_data_from_single_file(
         self,
@@ -181,6 +176,12 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
             The list of variable names.
         """
         return list(self._variables.keys())
+
+    def _unfiltered_data(self, varname) -> Data:
+        return self._data[varname]
+
+    def _unfiltered_stations(self) -> dict[str, Station]:
+        return self._stations
 
     def close(self):
         pass

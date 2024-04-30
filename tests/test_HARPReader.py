@@ -30,15 +30,16 @@ class TestHARPReader(unittest.TestCase):
                 data = ts.data(var)
                 self.assertGreater(len(data), 10000)
                 self.assertEqual(data.units, cfunits.Units(self.test_units[_v_idx]))
+                self.assertGreaterEqual(len(ts.variables()), 2)
+                self.assertGreaterEqual(len(ts.stations()), 1)
 
     def test_2open_directory(self):
         if os.path.exists(self.testdata_dir):
             with pyaro.open_timeseries(
                 self.engine, self.testdata_dir, filters=[], vars_to_read=self.test_vars
             ) as ts:
-                for _v_idx, var in enumerate(self.test_vars):
-                    self.assertGreaterEqual(len(ts.variables()), 2)
-                    self.assertGreaterEqual(len(ts.stations()), 7)
+                self.assertGreaterEqual(len(ts.variables()), 2)
+                self.assertGreaterEqual(len(ts.stations()), 7)
         else:
             pass
 
