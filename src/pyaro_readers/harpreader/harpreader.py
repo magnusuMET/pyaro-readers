@@ -49,12 +49,13 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
         self._files = []
         self._stations = {}
         self._vars_to_read = vars_to_read
+        self._set_filters(filters)
 
         # variable include filter comes like this
-        #{'variables': {'include': ['PM10_density']}}
+        # {'variables': {'include': ['PM10_density']}}
         # test for variable filter
-        if 'variables' in filters:
-            if 'include' in filters["variables"]:
+        if "variables" in filters:
+            if "include" in filters["variables"]:
                 vars_to_read = filters["variables"]["include"]
                 self._vars_to_read = vars_to_read
                 logger.info(f"applying variable include filter {vars_to_read}...")
@@ -111,7 +112,10 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
         ) as d:
             for vname, var in d.data_vars.items():
                 if vname in self._vars_to_read:
-                    variables[vname] = cfunits.Units(var.attrs["units"])
+                    # Units in pyaro arte by definition strings, but this way
+                    # we can make sure that cfunits understands them
+                    variables[vname] = str(cfunits.Units(var.attrs["units"]))
+                    # variables[vname] = var.attrs["units"]
 
         return variables
 
@@ -139,13 +143,20 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
             return False
 
         values = dt[varname].to_numpy()
+        # take station name from filename since there is nmo name in the data...
+        stat_name = os.path.basename(file).split("-")[2]
 
         values_length = len(values)
         start_time = np.asarray(dt["datetime_start"])
         stop_time = np.asarray(dt["datetime_stop"])
+        # start and stop time have been the same in the 1st data revision
+        # check that and assume hourly data if it's still the case
+        t_diff = stop_time - start_time
+        if t_diff.sum() == 0:
+            stop_time = stop_time + np.timedelta64(1, "h")
         lat = np.asarray([dt["latitude"]] * values_length)
         long = np.asarray([dt["longitude"]] * values_length)
-        station = np.asarray([np.nan] * values_length)
+        station = np.asarray([stat_name] * values_length)
         altitude = np.asarray([dt["altitude"]] * values_length)
 
         flags = np.asarray([Flag.VALID] * values_length)
@@ -163,8 +174,6 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
         )
 
         # fill self._stations
-        # take station name from filename...
-        stat_name = os.path.basename(file).split("-")[2]
 
         if not stat_name in self._stations:
             self._stations[stat_name] = Station(
@@ -188,7 +197,7 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
         list[str]
             The list of variable names.
         """
-        return list(self._variables.keys())
+        return self._data.keys()
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]

@@ -11,14 +11,14 @@ class TestHARPReader(unittest.TestCase):
     file = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
         "testdata",
-        "sinca-surface-157-999999-001.nc",
+        "sinca-surface-220-999999-001.nc",
     )
 
     testdata_dir = (
         "/lustre/storeB/project/aerocom/aerocom1/AEROCOM_OBSDATA/CNEMC/aggregated/"
     )
-    test_vars = ["CO_volume_mixing_ratio", "PM2p5_density"]
-    test_units = ["ppm", "ug/m3"]
+    test_vars = ["PM10_density", "CO_volume_mixing_ratio", "PM2p5_density"]
+    test_units = ["ug/m3", "ppm", "ug/m3"]
 
     def test_1read(self):
         with pyaro.open_timeseries(
@@ -29,7 +29,9 @@ class TestHARPReader(unittest.TestCase):
             for _v_idx, var in enumerate(self.test_vars):
                 data = ts.data(var)
                 self.assertGreater(len(data), 10000)
-                self.assertEqual(data.units, cfunits.Units(self.test_units[_v_idx]))
+                self.assertEqual(
+                    data.units, str(cfunits.Units(self.test_units[_v_idx]))
+                )
                 self.assertGreaterEqual(len(ts.variables()), 2)
                 self.assertGreaterEqual(len(ts.stations()), 1)
 
