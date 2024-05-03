@@ -18,7 +18,7 @@ class TestHARPReader(unittest.TestCase):
         "/lustre/storeB/project/aerocom/aerocom1/AEROCOM_OBSDATA/CNEMC/aggregated/"
     )
     test_vars = ["PM10_density", "CO_volume_mixing_ratio", "PM2p5_density"]
-    test_units = ["ug/m3", "ppm", "ug/m3"]
+    test_units = ["ug m-3", "ppm", "ug m-3"]
 
     def test_1read(self):
         with pyaro.open_timeseries(
