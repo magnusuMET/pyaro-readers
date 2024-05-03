@@ -14,7 +14,7 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 import cfunits
-from ..units_helpers import UALIASES
+from pyaro_readers.units_helpers import UALIASES
 
 logger = logging.getLogger(__name__)
 
