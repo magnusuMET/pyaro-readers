@@ -114,8 +114,8 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                 if vname in self._vars_to_read:
                     # Units in pyaro arte by definition strings, but this way
                     # we can make sure that cfunits understands them
+                    # otherwise variables[vname] = var.attrs["units"] should work as well
                     variables[vname] = str(cfunits.Units(var.attrs["units"]))
-                    # variables[vname] = var.attrs["units"]
 
         return variables
 
@@ -143,7 +143,7 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
             return False
 
         values = dt[varname].to_numpy()
-        # take station name from filename since there is nmo name in the data...
+        # take station name from filename since there is no name in the data...
         stat_name = os.path.basename(file).split("-")[2]
 
         values_length = len(values)
