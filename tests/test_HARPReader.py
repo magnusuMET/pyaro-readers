@@ -29,6 +29,7 @@ class TestHARPReader(unittest.TestCase):
             for _v_idx, var in enumerate(self.test_vars):
                 data = ts.data(var)
                 self.assertGreater(len(data), 10000)
+                assert isinstance(data.units, str)
                 self.assertEqual(
                     data.units, str(cfunits.Units(self.test_units[_v_idx]))
                 )
@@ -40,6 +41,9 @@ class TestHARPReader(unittest.TestCase):
             with pyaro.open_timeseries(
                 self.engine, self.testdata_dir, filters=[], vars_to_read=self.test_vars
             ) as ts:
+                for _v_idx, var in enumerate(self.test_vars):
+                    data = ts.data(var)
+                    assert isinstance(data.units, str)
                 self.assertGreaterEqual(len(ts.variables()), 2)
                 self.assertGreaterEqual(len(ts.stations()), 7)
         else:
