@@ -12,7 +12,6 @@ from tqdm import tqdm
 from pyaro_readers.units_helpers import UALIASES
 
 from pathlib import Path
-import cf_units
 import re
 
 logger = logging.getLogger(__name__)
@@ -32,9 +31,7 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         filename: [Path, str],
         filters=[],
         tqdm_desc: [str, None] = None,
-        ts_type: str = "daily",
         filemask: str = FILE_MASK,
-        # files: list = None,
         vars_to_read: list[str] = None,
     ):
         self._filters = filters
