@@ -5,9 +5,6 @@ class UnitConversionError(ValueError):
     pass
 
 
-# from pyaerocom.tstype import TsType
-# from pyaerocom.variable_helpers import get_variable
-
 #: default frequency for rates variables (e.g. deposition, precip)
 RATES_FREQ_DEFAULT = "d"
 
