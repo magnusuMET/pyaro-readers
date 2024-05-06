@@ -67,6 +67,5 @@ class TestPMFEBASTimeSeriesReader(unittest.TestCase):
                 assert var in self.test_vars
 
 
-
 if __name__ == "__main__":
     unittest.main()
