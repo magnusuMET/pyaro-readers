@@ -91,7 +91,7 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                     data = NpStructuredData(_var, units)
                     self._data[_var] = data
 
-                dummy = self._get_data_from_single_file(
+                self._get_data_from_single_file(
                     _file,
                     _var,
                 )
@@ -139,11 +139,10 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
             Data instance to which the data will be appended to in-place.
 
         """
-        dt = xr.open_dataset(file)
+        dt = xr.load_dataset(file)
 
         if dt.attrs.get("Conventions", None) != "HARP-1.0":
             raise ValueError(f"File {file} is not a HARP file.")
-            return False
 
         values = dt[varname].to_numpy()
         # take station name from filename since there is no name in the data...
@@ -190,8 +189,6 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                     "long_name": stat_name,
                 }
             )
-        dt.close()
-        return True
 
     def _unfiltered_variables(self) -> list[str]:
         """Returns a list of the variable names.
