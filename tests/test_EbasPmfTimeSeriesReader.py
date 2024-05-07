@@ -1,10 +1,9 @@
 import unittest
-import urllib.request
 import os
 
 import pyaro
 import pyaro.timeseries
-from pyaro.timeseries.Wrappers import VariableNameChangingReader
+from pyaro_readers.nilupmfebas.ebas_nasa_ames import read_ebas_flags_file
 
 
 class TestPMFEBASTimeSeriesReader(unittest.TestCase):
@@ -67,8 +66,6 @@ class TestPMFEBASTimeSeriesReader(unittest.TestCase):
                 assert var in self.test_vars
 
     def test_3open_ebascsvfile(self):
-        from pyaro_readers.nilupmfebas.ebas_nasa_ames import read_ebas_flags_file
-
         dummy = read_ebas_flags_file(None)
         assert isinstance(dummy, dict)
         assert isinstance(dummy["valid"], dict)
