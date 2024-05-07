@@ -650,7 +650,6 @@ class EbasNasaAmesFile(NasaAmesHeader):
             if IN_DATA:  # in data block (end of file)
                 try:
                     data.append(tuple(float(x.strip()) for x in line.strip().split()))
-                    # data.append([float(x.strip()) for x in line.strip().split()])
                 except Exception as e:
                     logger.warning(
                         f"EbasNasaAmesFile: Failed to read data row {dc}. Reason: {e}"
