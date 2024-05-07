@@ -41,6 +41,7 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._header = []
         self._opts = {"default": ReadEbasOptions()}
         self._variables = {}
+        self._metadata = {}
 
         # variable include filter comes like this
         # {'variables': {'include': ['PM10_density']}}
@@ -159,6 +160,14 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     # but unfortunately not always
                     # remove all non numbers
                     alt = float(re.sub(r"[^\d.-]+", "", alt_str))
+                # prepare some station based metadata
+                _meta_dummy = {}
+                _meta_dummy["file_metadata"] = {
+                    filename: {
+                        "meta": _file_dummy.meta,
+                        "var_defs": _file_dummy.var_defs,
+                    }
+                }
 
                 self._stations[stat_name] = Station(
                     {
@@ -169,7 +178,8 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                         "country": country,
                         "url": "",
                         "long_name": stat_name,
-                    }
+                    },
+                    metadata=_meta_dummy,
                 )
             else:
                 lat = self._stations[stat_name].latitude
