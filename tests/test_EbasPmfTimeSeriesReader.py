@@ -68,6 +68,7 @@ class TestPMFEBASTimeSeriesReader(unittest.TestCase):
 
     def test_3open_ebascsvfile(self):
         from pyaro_readers.nilupmfebas.ebas_nasa_ames import read_ebas_flags_file
+
         dummy = read_ebas_flags_file(None)
         assert isinstance(dummy, dict)
         assert isinstance(dummy["valid"], dict)

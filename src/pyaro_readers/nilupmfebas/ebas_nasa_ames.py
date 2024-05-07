@@ -805,6 +805,7 @@ class EbasNasaAmesFile(NasaAmesHeader):
         s += f"\n{self._data_short_str()}"
         return s
 
+
 def read_ebas_flags_file(ebas_flags_csv: None):
     """Reads file ebas_flags.csv
 
@@ -823,9 +824,9 @@ def read_ebas_flags_file(ebas_flags_csv: None):
     info = {}
     if ebas_flags_csv is None:
         ebas_flags_csv = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        "ebas_flags.csv",
-    )
+            os.path.dirname(os.path.realpath(__file__)),
+            "ebas_flags.csv",
+        )
     with open(ebas_flags_csv) as fio:
         for line in fio:
             spl = line.strip().split(",")
