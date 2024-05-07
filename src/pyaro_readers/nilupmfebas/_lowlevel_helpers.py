@@ -15,62 +15,6 @@ from ._warnings import ignore_warnings
 logger = logging.getLogger(__name__)
 
 
-def invalid_input_err_str(argname, argval, argopts):
-    """Just a small helper to format an input error string for functions
-
-    Parameters
-    ----------
-    argname : str
-        name of input argument
-    argval
-        (invalid) value of input argument
-    argopts
-        possible input args for arg
-
-    Returns
-    -------
-    str
-        formatted string that can be parsed to an Exception
-    """
-
-    return f"Invalid input for {argname} ({argval}), choose from {argopts}"
-
-
-def check_dir_access(path):
-    """Uses multiprocessing approach to check if location can be accessed
-
-    Parameters
-    ----------
-    loc : str
-        path that is supposed to be checked
-
-    Returns
-    -------
-    bool
-        True, if location is accessible, else False
-    """
-    if not isinstance(path, str):
-        return False
-
-    return os.access(path, os.R_OK)
-
-
-def check_write_access(path):
-    """Check if input location provides write access
-
-    Parameters
-    ----------
-    path : str
-        directory to be tested
-
-    """
-    if not isinstance(path, str):
-        # not a path
-        return False
-
-    return os.access(path, os.W_OK)
-
-
 def _class_name(obj):
     """Returns class name of an object"""
     return type(obj).__name__
@@ -95,43 +39,6 @@ class Validator(abc.ABC):
         pass
 
 
-class TypeValidator(Validator):
-    def __init__(self, type):
-        self._type = type
-
-    def validate(self, val):
-        if not isinstance(val, self._type):
-            raise ValueError(f"need instance of {self._type}")
-        return val
-
-
-class StrType(Validator):
-    def validate(self, val):
-        if not isinstance(val, str):
-            raise ValueError(f"need str, got {val}")
-        return val
-
-
-class StrWithDefault(Validator):
-    def __init__(self, default: str):
-        self.default = default
-
-    def validate(self, val):
-        if not isinstance(val, str):
-            if val is None:
-                val = self.default
-            else:
-                raise ValueError(f"need str or None, got {val}")
-        return val
-
-
-class DictType(Validator):
-    def validate(self, val):
-        if not isinstance(val, dict):
-            raise ValueError(f"need dict, got {val}")
-        return val
-
-
 class FlexList(Validator):
     """list that can be instantated via input str, tuple or list or None"""
 
@@ -144,41 +51,6 @@ class FlexList(Validator):
             val = []
         elif not isinstance(val, list):
             raise ValueError(f"failed to convert {val} to list")
-        return val
-
-
-class EitherOf(Validator):
-    _allowed = FlexList()
-
-    def __init__(self, allowed: list):
-        self._allowed = allowed
-
-    def validate(self, val):
-        if not any([x == val for x in self._allowed]):
-            raise ValueError(
-                f"invalid value {val}, needs to be either of {self._allowed}."
-            )
-        return val
-
-
-class ListOfStrings(FlexList):
-    def validate(self, val):
-        # make sure to have a list
-        val = super().validate(val)
-        # make sure all entries are strings
-        if not all([isinstance(x, str) for x in val]):
-            raise ValueError(f"not all items are str type in input list {val}")
-        return val
-
-
-class DictStrKeysListVals(Validator):
-    def validate(self, val: dict):
-        if not isinstance(val, dict):
-            raise ValueError(f"need dict, got {val}")
-        if any(not isinstance(x, str) for x in val):
-            raise ValueError(f"all keys need to be str type in {val}")
-        if any(not isinstance(x, list) for x in val.values()):
-            raise ValueError(f"all values need to be list type in {val}")
         return val
 
 
@@ -244,18 +116,6 @@ class Loc(abc.ABC):
     @abc.abstractmethod
     def create(self, value):
         pass
-
-
-class DirLoc(Loc):
-    def create(self, value):
-        os.makedirs(value, exist_ok=True)
-        self.logger.info(f"created directory {value}")
-
-
-class AsciiFileLoc(Loc):
-    def create(self, value):
-        self.logger.info(f"create ascii file {value}")
-        open(value, "w").close()
 
 
 class BrowseDict(MutableMapping):
@@ -585,25 +445,6 @@ def merge_dicts(dict1, dict2, discard_failing=True):
     return new
 
 
-def chk_make_subdir(base, name):
-    """Check if sub-directory exists in parent directory"""
-    d = os.path.join(base, name)
-    if not os.path.exists(d):
-        os.mkdir(d)
-    return d
-
-
-def check_dirs_exist(*dirs, **add_dirs):
-    for d in dirs:
-        if not os.path.exists(d):
-            print(f"Creating dir: {d}")
-            os.mkdir(d)
-    for k, d in add_dirs.items():
-        if not os.path.exists(d):
-            os.mkdir(d)
-            print(f"Creating dir: {d} ({k})")
-
-
 def list_to_shortstr(lst, indent=0):
     """Custom function to convert a list into a short string representation"""
 
@@ -635,34 +476,6 @@ def list_to_shortstr(lst, indent=0):
         lfmt = _short_lst_fmt([lst[0], lst[1], lst[-2], lst[-1]])
         s = f"{indentstr}{name_str}[{lfmt[0]}, {lfmt[1]}, ..., {lfmt[2]}, {lfmt[3]}]"
 
-    return s
-
-
-def sort_dict_by_name(d, pref_list: list = None) -> dict:
-    """Sort entries of input dictionary by their names and return ordered
-
-    Parameters
-    ----------
-    d : dict
-        input dictionary
-    pref_list : list, optional
-        preferred order of items (may be subset of keys in input dict)
-
-    Returns
-    -------
-    dict
-        sorted and ordered dictionary
-    """
-    if pref_list is None:
-        pref_list = []
-    s = {}
-    sorted_keys = sorted(d)
-    for k in pref_list:
-        if k in d:
-            s[k] = d[k]
-    for k in sorted_keys:
-        if not k in pref_list:
-            s[k] = d[k]
     return s
 
 

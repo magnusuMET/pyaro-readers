@@ -10,7 +10,6 @@ from pyaro.timeseries import (
 )
 from tqdm import tqdm
 from pyaro_readers.units_helpers import UALIASES
-from typing import Tuple
 
 from pathlib import Path
 import re
