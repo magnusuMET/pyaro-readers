@@ -269,7 +269,7 @@ class EbasFlagCol:
     @property
     def FLAG_INFO(self):
         """Detailed information about EBAS flag definitions"""
-        return const.ebas_flag_info
+        return read_ebas_flags_file()
 
     @property
     def decoded(self):
@@ -804,3 +804,53 @@ class EbasNasaAmesFile(NasaAmesHeader):
         s += f"\n\n{str_underline('Data', indent=3)}"
         s += f"\n{self._data_short_str()}"
         return s
+
+def read_ebas_flags_file(ebas_flags_csv: None):
+    """Reads file ebas_flags.csv
+
+    Parameters
+    ----------
+    ebas_flags_csv : str
+        file containing flag info
+
+    Returns
+    -------
+    dict
+        dict with loaded flag info
+    """
+    valid = {}
+    values = {}
+    info = {}
+    if ebas_flags_csv is None:
+        ebas_flags_csv = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "ebas_flags.csv",
+    )
+    with open(ebas_flags_csv) as fio:
+        for line in fio:
+            spl = line.strip().split(",")
+            num = int(spl[0].strip())
+            try:
+                val_str = spl[-1][1:-1]
+            except Exception:
+                raise OSError(
+                    f"Failed to read flag information in row {line} "
+                    f"(Check if entries in ebas_flags.csv are quoted)"
+                )
+            info_str = ",".join(spl[1:-1])
+            try:
+                info_str = info_str[1:-1]
+            except Exception:
+                raise OSError(
+                    f"Failed to read flag information in row {line} "
+                    f"(Check if entries in ebas_flags.csv are quoted)"
+                )
+            isvalid = True if val_str == "V" else False
+            valid[num] = isvalid
+            values[num] = val_str
+            info[num] = info_str
+    result = {}
+    result["valid"] = valid
+    result["info"] = info
+    result["vals"] = values
+    return result

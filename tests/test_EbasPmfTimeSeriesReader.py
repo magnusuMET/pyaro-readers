@@ -66,6 +66,14 @@ class TestPMFEBASTimeSeriesReader(unittest.TestCase):
             for var in ts.variables():
                 assert var in self.test_vars
 
+    def test_3open_ebascsvfile(self):
+        from pyaro_readers.nilupmfebas.ebas_nasa_ames import read_ebas_flags_file
+        dummy = read_ebas_flags_file(None)
+        assert isinstance(dummy, dict)
+        assert isinstance(dummy["valid"], dict)
+        assert isinstance(dummy["info"], dict)
+        assert isinstance(dummy["vals"], dict)
+
 
 if __name__ == "__main__":
     unittest.main()
