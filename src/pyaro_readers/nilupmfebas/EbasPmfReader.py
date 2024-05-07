@@ -10,6 +10,7 @@ from pyaro.timeseries import (
 )
 from tqdm import tqdm
 from pyaro_readers.units_helpers import UALIASES
+from typing import Tuple
 
 from pathlib import Path
 import re
@@ -100,26 +101,23 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         matrix = _file_dummy.meta["matrix"]
         vars_read_in_file = []
         # multicolumn file: ebas var names come from _file_dummy.col_names_vars
-        for var_idx in range(len(_file_dummy.var_defs)):
+        for var_idx, var_def in enumerate(_file_dummy.var_defs):
             # continue if the variable is not an actual data variable (but e.g. time)
-            if not _file_dummy.var_defs[var_idx].is_var:
+            if not var_def.is_var:
                 continue
             # skip additional fields...
-            if _file_dummy.var_defs[var_idx].name in FIELDS_TO_SKIP:
+            if var_def.name in FIELDS_TO_SKIP:
                 continue
             # continue if the statistcs is to be ignored
             try:
-                if (
-                    _file_dummy.var_defs[var_idx].statistics
-                    in self._opts["default"].ignore_statistics
-                ):
+                if var_def.statistics in self._opts["default"].ignore_statistics:
                     continue
             except KeyError:
                 # sometimes there's no statistics: pass
                 pass
 
             # adjust unit string
-            unit = _file_dummy.var_defs[var_idx]["unit"]
+            unit = var_def.unit
             if unit in UALIASES:
                 unit = UALIASES[unit]
             var_name = f"{matrix}#{_file_dummy.var_defs[var_idx].name}#{unit}"
@@ -139,27 +137,9 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 # the location naming is not consistent
                 # try the two we have seen so far
                 try:
-                    lat = float(_file_dummy.meta["station_latitude"])
-                    lon = float(_file_dummy.meta["station_longitude"])
-                    alt_str = _file_dummy.meta["station_altitude"]
-                except KeyError:
-                    # might not always work either
-                    try:
-                        lat = float(_file_dummy.meta["measurement_latitude"])
-                        lon = float(_file_dummy.meta["measurement_longitude"])
-                        alt_str = _file_dummy.meta["measurement_altitude"]
-                    except KeyError:
-                        logger.info(
-                            f"no lat / lon found in file {filename}. Skipping the file..."
-                        )
-                        return None
-                try:
-                    # usually there's a blank between the value and the unit
-                    alt = float(alt_str.split(" ")[0])
-                except ValueError:
-                    # but unfortunately not always
-                    # remove all non numbers
-                    alt = float(re.sub(r"[^\d.-]+", "", alt_str))
+                    lat, lon, alt = self._get_station_loc_data(filename, _file_dummy)
+                except EBASPMFReaderException:
+                    return
                 # prepare some station based metadata
                 _meta_dummy = {}
                 _meta_dummy["file_metadata"] = {
@@ -225,6 +205,33 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
     def close(self):
         pass
+
+    def _get_station_loc_data(
+        self, filename: str, _file_dummy: EbasNasaAmesFile
+    ) -> tuple[float, float, float]:
+        try:
+            lat = float(_file_dummy.meta["station_latitude"])
+            lon = float(_file_dummy.meta["station_longitude"])
+            alt_str = _file_dummy.meta["station_altitude"]
+        except KeyError:
+            # might not always work either
+            try:
+                lat = float(_file_dummy.meta["measurement_latitude"])
+                lon = float(_file_dummy.meta["measurement_longitude"])
+                alt_str = _file_dummy.meta["measurement_altitude"]
+            except KeyError:
+                logger.info(
+                    f"no lat / lon found in file {filename}. Skipping the file..."
+                )
+                raise EBASPMFReaderException
+        try:
+            # usually there's a blank between the value and the unit
+            alt = float(alt_str.split(" ")[0])
+        except ValueError:
+            # but unfortunately not always
+            # remove all non numbers
+            alt = float(re.sub(r"[^\d.-]+", "", alt_str))
+        return lat, lon, alt
 
 
 class EbasPmfTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):
