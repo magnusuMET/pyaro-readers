@@ -92,7 +92,6 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         tqdm_desc: [str, None] = None,
         ts_type: str = "hourly",
     ):
-
         self._stations = {}
         self._data = {}
         self._set_filters(filters)
@@ -176,7 +175,6 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
                 self._data[variable] = da
 
         for line in lines[data_start_line:]:
-
             line_entries = [
                 float(x) if abs(float(x) - NAN_CODE) > NAN_EPS else np.nan
                 for x in line.split()
@@ -221,7 +219,6 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
             return False
 
     def _lookup_function(self):
-
         geo = Geocoder_Reverse_NE()
         return lambda lat, lon: geo.lookup_nearest(lat, lon)["ISO_A2_EH"]
 
