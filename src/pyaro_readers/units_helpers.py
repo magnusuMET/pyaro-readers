@@ -72,6 +72,7 @@ UALIASES = {
     # "ug C m-3": "ug C/m3",
     # "ug N m-3": "ug N/m3",
     "ugC/m3": "ug C m-3",
+    "ug C/m3": "ug C m-3",
     "ug/m3": "ug m-3",
     # deposition rates (implicit)
     ## sulphur species
@@ -98,4 +99,5 @@ UALIASES = {
     "MM/H": "mm h-1",
     # others
     "/m": "m-1",
+    "ng/m3": "ng m-3",
 }
