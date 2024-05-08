@@ -9,15 +9,20 @@ from pyaro.timeseries import (
     Station,
 )
 from tqdm import tqdm
+from pyaro_readers.units_helpers import UALIASES
 
 from pathlib import Path
-import cf_units
 import re
 
 logger = logging.getLogger(__name__)
 
 FILL_COUNTRY_FLAG = False
 FILE_MASK = "*.nas"
+FIELDS_TO_SKIP = ["start_time of measurement", "end_time of measurement"]
+
+
+class EBASPMFReaderException(Exception):
+    pass
 
 
 class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
@@ -26,17 +31,26 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         filename: [Path, str],
         filters=[],
         tqdm_desc: [str, None] = None,
-        ts_type: str = "daily",
         filemask: str = FILE_MASK,
-        # files: list = None,
         vars_to_read: list[str] = None,
     ):
+        self._filters = filters
         self._stations = {}
         self._data = {}  # var -> {data-array}
         self._set_filters(filters)
         self._header = []
         self._opts = {"default": ReadEbasOptions()}
         self._variables = {}
+        self._metadata = {}
+
+        # variable include filter comes like this
+        # {'variables': {'include': ['PM10_density']}}
+        # test for variable filter
+        if "variables" in filters:
+            if "include" in filters["variables"]:
+                vars_to_read = filters["variables"]["include"]
+                self._vars_to_read = vars_to_read
+                logger.info(f"applying variable include filter {vars_to_read}...")
 
         realpath = Path(filename).resolve()
 
@@ -55,16 +69,13 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             bar.close()
         elif Path(realpath).is_file():
             self.read_file(realpath)
-            # print(realpath)
-
         else:
             # filename is something else
-            # Error
-            pass
+            raise EBASPMFReaderException(f"No such file or directory: {filename}")
 
     def read_file_basic(
         self,
-        filename,
+        filename: [Path, str],
     ):
         """Read EBAS NASA Ames file
 
@@ -82,66 +93,60 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
         return data_out
 
-    def read_file(self, filename, vars_to_read=None):
+    def read_file(self, filename: [Path, str], vars_to_read: list[str] = None):
         """Read EBAS NASA Ames file and put the data in the object"""
 
         _file_dummy = self.read_file_basic(filename)
         matrix = _file_dummy.meta["matrix"]
         vars_read_in_file = []
         # multicolumn file: ebas var names come from _file_dummy.col_names_vars
-        for var_idx in range(len(_file_dummy.var_defs)):
+        for var_idx, var_def in enumerate(_file_dummy.var_defs):
             # continue if the variable is not an actual data variable (but e.g. time)
-            if not _file_dummy.var_defs[var_idx].is_var:
+            if not var_def.is_var:
+                continue
+            # skip additional fields...
+            if var_def.name in FIELDS_TO_SKIP:
                 continue
             # continue if the statistcs is to be ignored
             try:
-                if (
-                    _file_dummy.var_defs[var_idx].statistics
-                    in self._opts["default"].ignore_statistics
-                ):
+                if var_def.statistics in self._opts["default"].ignore_statistics:
                     continue
             except KeyError:
                 # sometimes there's no statistics: pass
                 pass
 
-            # var_name = f"{matrix}#{_file_dummy.var_defs[var_idx].name}"
-            # var_name = f"{matrix}#{_file_dummy.var_defs[var_idx].name}#{_file_dummy.meta['unit']}"
-            var_name = f"{matrix}#{_file_dummy.var_defs[var_idx].name}#{_file_dummy.var_defs[var_idx]['unit']}"
+            # adjust unit string
+            unit = var_def.unit
+            if unit in UALIASES:
+                unit = UALIASES[unit]
+            var_name = f"{matrix}#{_file_dummy.var_defs[var_idx].name}#{unit}"
             if vars_to_read is not None:
                 if var_name not in vars_to_read:
                     continue
             if var_name not in self._variables:
                 self._variables[var_name] = (
                     var_name,
-                    _file_dummy.var_defs[var_idx]['unit'],
+                    unit,
                 )
 
-            var_unit = _file_dummy.var_defs[var_idx].unit
+            var_unit = unit
             stat_name = _file_dummy.meta["station_code"]
             if stat_name not in self._stations:
                 country = _file_dummy.meta["station_code"][0:2]
                 # the location naming is not consistent
                 # try the two we have seen so far
                 try:
-                    lat = float(_file_dummy.meta["station_latitude"])
-                    lon = float(_file_dummy.meta["station_longitude"])
-                    alt_str = _file_dummy.meta["station_altitude"]
-                except KeyError:
-                    # might not always work either
-                    try:
-                        lat = float(_file_dummy.meta["measurement_latitude"])
-                        lon = float(_file_dummy.meta["measurement_longitude"])
-                        alt_str = _file_dummy.meta["measurement_altitude"]
-                    except KeyError:
-                        print(f"no lat / lon found in file {filename}. Skipping...")
-                        return None
-                try:
-                    # usually there's a blank between the value and the unit
-                    alt = float(alt_str.split(" ")[0])
-                except ValueError:
-                    # but unfortunately not always
-                    # remove all non numbers
-                    alt = float(re.sub(r"[^\d.-]+", "", alt_str))
+                    lat, lon, alt = self._get_station_loc_data(filename, _file_dummy)
+                except EBASPMFReaderException:
+                    return
+                # prepare some station based metadata
+                _meta_dummy = {}
+                _meta_dummy["file_metadata"] = {
+                    filename: {
+                        "meta": _file_dummy.meta,
+                        "var_defs": _file_dummy.var_defs,
+                    }
+                }
 
                 self._stations[stat_name] = Station(
                     {
@@ -152,7 +157,8 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                         "country": country,
                         "url": "",
                         "long_name": stat_name,
-                    }
+                    },
+                    metadata=_meta_dummy,
                 )
             else:
                 lat = self._stations[stat_name].latitude
@@ -162,7 +168,9 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             # put only the 1st match in the data...
             # because that is the one we should be interested in
             if var_name in vars_read_in_file:
-                print(f"Warning! Variable {var_name} is already used in current file! Skipping...")
+                logger.info(
+                    f"Warning! Variable {var_name} is already used in current file! Only important if the data looks wrong. Skipping..."
+                )
                 continue
             else:
                 vars_read_in_file.append(var_name)
@@ -184,9 +192,6 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     Flag.VALID,
                     np.nan,
                 )
-                # print(_file_dummy.stop_meas[t_idx])
-                # pass
-        assert True
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
@@ -199,6 +204,33 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
     def close(self):
         pass
+
+    def _get_station_loc_data(
+        self, filename: str, _file_dummy: EbasNasaAmesFile
+    ) -> tuple[float, float, float]:
+        try:
+            lat = float(_file_dummy.meta["station_latitude"])
+            lon = float(_file_dummy.meta["station_longitude"])
+            alt_str = _file_dummy.meta["station_altitude"]
+        except KeyError:
+            # might not always work either
+            try:
+                lat = float(_file_dummy.meta["measurement_latitude"])
+                lon = float(_file_dummy.meta["measurement_longitude"])
+                alt_str = _file_dummy.meta["measurement_altitude"]
+            except KeyError:
+                logger.info(
+                    f"no lat / lon found in file {filename}. Skipping the file..."
+                )
+                raise EBASPMFReaderException
+        try:
+            # usually there's a blank between the value and the unit
+            alt = float(alt_str.split(" ")[0])
+        except ValueError:
+            # but unfortunately not always
+            # remove all non numbers
+            alt = float(re.sub(r"[^\d.-]+", "", alt_str))
+        return lat, lon, alt
 
 
 class EbasPmfTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):

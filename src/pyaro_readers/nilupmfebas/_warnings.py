@@ -44,19 +44,3 @@ def ignore_warnings(category: type[Warning], *messages: str):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=category, message=message)
         yield
-
-
-def ignore_basemap_warning():  # pragma: no cover
-    warnings.filterwarnings(
-        "ignore", r".*install Basemap$", UserWarning, "geonum", append=True
-    )
-
-
-def ignore_earth_radius_warning():  # pragma: no cover
-    warnings.filterwarnings(
-        "ignore",
-        "Using DEFAULT_SPHERICAL_EARTH_RADIUS",
-        UserWarning,
-        "iris.*",
-        append=True,
-    )

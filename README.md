@@ -40,8 +40,8 @@ conventions.
 ### nilupmfebas: EBAS format (Nasa-Ames)
 Reader for random EBAS data in NASA-AMES format. This reader is tested only with PMF data provided by
 NILU, but should in principle able to read any random text file in EBAS NASA-AMES.
-The variables provided contain in EBAS terms a combination of matrix and component with a number sign (#)
-as seperator (e.g. `pm10_pm25#total_carbon` or `pm10#organic_carbon` or `pm10#galactosan`)
+The variables provided contain in EBAS terms a combination of matrix, component and unit with a number sign (#)
+as seperator (e.g. `pm10_pm25#total_carbon#ug C m-3"` or `pm10#organic_carbon##ug C m-3` or `pm10#galactosan#ng m-3`)
 
 ## Usage
 ### aeronetsunreader
@@ -143,23 +143,16 @@ with pyaro.open_timeseries(
 ```
 
 
-### geocoder_reverse_natural_earth
-geocoder_reverse_natural_earth is small helper to identify country codes for obs networks that don't mention the
-countrycode of a station in their location data
-
 ### nilupmfebas
 ```python
 import pyaro
-TEST_URL = "/home/jang/data/Python3/pyaro-readers/tests/testdata/PMF_EBAS/NO0042G.20171109070000.20220406124026.high_vol_sampler..pm10.4mo.1w.NO01L_hvs_week_no42_pm10.NO01L_NILU_sunset_002.lev2.nas"
-TEST_URL = "/home/jang/data/Python3/pyaro-readers/tests/testdata/PMF_EBAS/NO0042G.20171109070000.20220406124026.high_vol_sampler..pm10.4mo.1w.NO01L_hvs_week_no42_pm10.NO01L_NILU_sunset_002.lev2.nas"
-
+TEST_URL = "testdata/PMF_EBAS/NO0042G.20171109070000.20220406124026.high_vol_sampler..pm10.4mo.1w.NO01L_hvs_week_no42_pm10.NO01L_NILU_sunset_002.lev2.nas"
 def main():
     with pyaro.open_timeseries(
         'nilupmfebas', TEST_URL, filters=[]
     ) as ts:
         variables = ts.variables()
         for var in variables:
-
             data = ts.data(var)
             print(f"var:{var} ; unit:{data.units}")
             # stations
@@ -167,8 +160,7 @@ def main():
             # start_times
             print(data.start_times)
             for idx, time in enumerate(data.start_times):
-                print(f"{time}_{data.values[idx]}")
-
+                print(f"{time}: {data.values[idx]}")
             # stop_times
             data.end_times
             # latitudes
@@ -180,5 +172,7 @@ def main():
             # values
             data.values
 
+if __name__ == "__main__":
+    main()
 ```
 

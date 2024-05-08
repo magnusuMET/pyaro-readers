@@ -269,7 +269,7 @@ class EbasFlagCol:
     @property
     def FLAG_INFO(self):
         """Detailed information about EBAS flag definitions"""
-        return const.ebas_flag_info
+        return read_ebas_flags_file()
 
     @property
     def decoded(self):
@@ -632,8 +632,8 @@ class EbasNasaAmesFile(NasaAmesHeader):
         lc = 0  # line counter
         dc = 0  # data block line counter
         mc = 0  # meta block counter
-        END_VAR_DEF = np.nan  # will be set (info stored in header)
-        IN_DATA = False
+        end_var_def = np.nan  # will be set (info stored in header)
+        in_data = False
         data = []
         self.file = nasa_ames_file
         try:
@@ -647,10 +647,9 @@ class EbasNasaAmesFile(NasaAmesHeader):
                 return
 
         for line in lines:
-            if IN_DATA:  # in data block (end of file)
+            if in_data:  # in data block (end of file)
                 try:
                     data.append(tuple(float(x.strip()) for x in line.strip().split()))
-                    # data.append([float(x.strip()) for x in line.strip().split()])
                 except Exception as e:
                     logger.warning(
                         f"EbasNasaAmesFile: Failed to read data row {dc}. Reason: {e}"
@@ -677,18 +676,18 @@ class EbasNasaAmesFile(NasaAmesHeader):
                         logger.warning(msg)
             else:  # behind header section and before data definition (contains column defs and meta info)
                 if mc == 0:  # still in column definition
-                    END_VAR_DEF = self._NUM_FIXLINES + self.num_cols_dependent - 1
+                    end_var_def = self._NUM_FIXLINES + self.num_cols_dependent - 1
                     NUM_HEAD_LINES = self.num_head_lines
                     try:
                         self.var_defs.append(self._read_vardef_line(line))
                     except Exception as e:
                         logger.warning(repr(e))
 
-                elif lc < END_VAR_DEF:
+                elif lc < end_var_def:
                     self.var_defs.append(self._read_vardef_line(line))
 
                 elif lc == NUM_HEAD_LINES - 1:
-                    IN_DATA = True
+                    in_data = True
                     self._data_header = h = [x.strip() for x in line.split()]
                     # append information of first two columns to variable
                     # definition array.
@@ -707,7 +706,7 @@ class EbasNasaAmesFile(NasaAmesHeader):
                     if only_head:
                         return
                     logger.debug("REACHED DATA BLOCK")
-                elif lc >= END_VAR_DEF + 2:
+                elif lc >= end_var_def + 2:
                     try:
                         name, val = line.split(
                             ":", 1
@@ -804,3 +803,54 @@ class EbasNasaAmesFile(NasaAmesHeader):
         s += f"\n\n{str_underline('Data', indent=3)}"
         s += f"\n{self._data_short_str()}"
         return s
+
+
+def read_ebas_flags_file(ebas_flags_csv: None):
+    """Reads file ebas_flags.csv
+
+    Parameters
+    ----------
+    ebas_flags_csv : str
+        file containing flag info
+
+    Returns
+    -------
+    dict
+        dict with loaded flag info
+    """
+    valid = {}
+    values = {}
+    info = {}
+    if ebas_flags_csv is None:
+        ebas_flags_csv = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "ebas_flags.csv",
+        )
+    with open(ebas_flags_csv) as fio:
+        for line in fio:
+            spl = line.strip().split(",")
+            num = int(spl[0].strip())
+            try:
+                val_str = spl[-1][1:-1]
+            except Exception:
+                raise OSError(
+                    f"Failed to read flag information in row {line} "
+                    f"(Check if entries in ebas_flags.csv are quoted)"
+                )
+            info_str = ",".join(spl[1:-1])
+            try:
+                info_str = info_str[1:-1]
+            except Exception:
+                raise OSError(
+                    f"Failed to read flag information in row {line} "
+                    f"(Check if entries in ebas_flags.csv are quoted)"
+                )
+            isvalid = True if val_str == "V" else False
+            valid[num] = isvalid
+            values[num] = val_str
+            info[num] = info_str
+    result = {}
+    result["valid"] = valid
+    result["info"] = info
+    result["vals"] = values
+    return result
