@@ -1,15 +1,10 @@
-import csv
-from io import BytesIO
 from urllib.parse import urlparse
-from urllib.request import urlopen
-from zipfile import BadZipFile, ZipFile
 from pathlib import Path
 import datetime
 
 from geocoder_reverse_natural_earth import Geocoder_Reverse_NE
 
 import numpy as np
-import requests
 from pyaro.timeseries import (
     AutoFilterReaderEngine,
     Data,
@@ -18,28 +13,6 @@ from pyaro.timeseries import (
     Station,
 )
 from tqdm import tqdm
-
-# default URL
-# BASE_URL = "https://secondary-data-archive.nilu.no/ebas/gen.h8ds-8596/EIMPs_winter2017-2018_data.zip"
-# BASE_URL = "/lustre/storeB/project/fou/kl/emep/People/danielh/projects/pyaerocom/obs/nilu_pmf/cameo_2024/EIMPs_winter2017-2018_data/"
-# ABSORB_FOLDER = "EIMPs_winter_2017_2018_absorption/"
-# LEVO_FOLDER = "EIMPs_winter_2017_2018_ECOC_Levo/"
-# METADATA_FILE = "Sites_EBC-campaign.xlsx"
-# number of lines to read before the reading is handed to Pythobn's csv reader
-HEADER_LINE_NO = 7
-DELIMITER = ","
-#
-# NAN_VAL = -999.0
-# update progress bar every N lines...
-# PG_UPDATE_LINES = 100
-# main variables to store
-# LAT_NAME = "Station latitude"
-# LON_NAME = "Station longitude"
-# ALT_NAME = "Station altitude"
-# STAT_CODE = "Station code"
-# STAT_NAME = "Station name"
-# DATE_NAME = "Date(dd:mm:yyyy)"
-# TIME_NAME: str = "Time(hh:mm:ss)"
 
 BABAS_BB_NAME = "Babs_bb"
 BABAS_FF_NAME = "Babs_ff"
@@ -79,15 +52,13 @@ DATA_VARS.extend(COMPUTED_VARS)
 
 FILL_COUNTRY_FLAG = True
 
-TS_TYPE_DIFFS = {
-    "daily": np.timedelta64(12, "h"),
-    "instantaneous": np.timedelta64(0, "s"),
-    "points": np.timedelta64(0, "s"),
-    "monthly": np.timedelta64(15, "D"),
-}
-
 
 class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
+    """reading class for NILU PMF absortion data (campeign)
+    WARNING: although the data is in NASA AMES format, it's not in EBAS
+    NASA AMES format and therefore can't be read with the standard EBAS reader
+    """
+
     def __init__(
         self,
         filename,
@@ -187,9 +158,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
                 float(x) if abs(float(x) - NAN_CODE) > NAN_EPS else np.nan
                 for x in line.split()
             ]
-            starttime = startdate + datetime.timedelta(
-                hours=int(line_entries[0] * 24)
-            )  # startdate + datetime.timedelta(hours=line_entries[0])
+            starttime = startdate + datetime.timedelta(hours=int(line_entries[0] * 24))
             endtime = startdate + datetime.timedelta(hours=int(line_entries[0] * 24))
 
             for key in data_indecies:
@@ -239,7 +208,9 @@ class NILUPMFAbsorptionTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine)
         return self.reader_class()(filename, *args, **kwargs)
 
     def description(self):
-        return "Simple reader of Nilu PMF-files using the pyaro infrastructure"
+        return (
+            "Simple reader of Nilu PMF absortion files using the pyaro infrastructure"
+        )
 
     def url(self):
         return "https://github.com/metno/pyaro-readers"
