@@ -21,36 +21,40 @@ from tqdm import tqdm
 
 # default URL
 # BASE_URL = "https://secondary-data-archive.nilu.no/ebas/gen.h8ds-8596/EIMPs_winter2017-2018_data.zip"
-BASE_URL = "/lustre/storeB/project/fou/kl/emep/People/danielh/projects/pyaerocom/obs/nilu_pmf/cameo_2024/EIMPs_winter2017-2018_data/"
-ABSORB_FOLDER = "EIMPs_winter_2017_2018_absorption/"
-LEVO_FOLDER = "EIMPs_winter_2017_2018_ECOC_Levo/"
-METADATA_FILE = "Sites_EBC-campaign.xlsx"
+# BASE_URL = "/lustre/storeB/project/fou/kl/emep/People/danielh/projects/pyaerocom/obs/nilu_pmf/cameo_2024/EIMPs_winter2017-2018_data/"
+# ABSORB_FOLDER = "EIMPs_winter_2017_2018_absorption/"
+# LEVO_FOLDER = "EIMPs_winter_2017_2018_ECOC_Levo/"
+# METADATA_FILE = "Sites_EBC-campaign.xlsx"
 # number of lines to read before the reading is handed to Pythobn's csv reader
 HEADER_LINE_NO = 7
 DELIMITER = ","
 #
-NAN_VAL = -999.0
+# NAN_VAL = -999.0
 # update progress bar every N lines...
-PG_UPDATE_LINES = 100
+# PG_UPDATE_LINES = 100
 # main variables to store
-LAT_NAME = "Station latitude"
-LON_NAME = "Station longitude"
-ALT_NAME = "Station altitude"
-STAT_CODE = "Station code"
-STAT_NAME = "Station name"
-DATE_NAME = "Date(dd:mm:yyyy)"
-TIME_NAME: str = "Time(hh:mm:ss)"
+# LAT_NAME = "Station latitude"
+# LON_NAME = "Station longitude"
+# ALT_NAME = "Station altitude"
+# STAT_CODE = "Station code"
+# STAT_NAME = "Station name"
+# DATE_NAME = "Date(dd:mm:yyyy)"
+# TIME_NAME: str = "Time(hh:mm:ss)"
 
 BABAS_BB_NAME = "Babs_bb"
 BABAS_FF_NAME = "Babs_ff"
 EBC_BB_NAME = "eBC_bb"
 EBC_FF_NAME = "eBC_ff"
 
-
+# in principle this has to be read from the file since it's allowed to vary over the
+# different variables. But since these NASA-AMES files are not compatible with
+# EBAS NASA-AMES files we stick to this for now
 NAN_CODE = 999.9999
 NAN_EPS = 1e-2
 
-
+# in principle WRONG since line indices are not absolute in NASA-AMES files
+# But since these NASA-AMES files are not compatible with EBAS NASA-AMES files
+# we stick to this for now
 INDECIES = dict(
     PI=1,
     DATES=6,
@@ -60,20 +64,20 @@ INDECIES = dict(
     EBC_BB_UNIT=15,
     EBC_FF_UNIT=16,
     START=17,
-    CODE=18,
-    NAME=19,
-    LAT=20,
-    LON=21,
-    ALT=22,
+    NAME=18,
+    LAT=19,
+    LON=20,
+    ALT=21,
 )
 
+FILE_MASK = "*.nas"
 
 DATA_VARS = [BABAS_BB_NAME, BABAS_FF_NAME, EBC_BB_NAME, EBC_FF_NAME]
 COMPUTED_VARS = []
 # The computed variables have to be named after the read ones, otherwise the calculation will fail!
 DATA_VARS.extend(COMPUTED_VARS)
 
-FILL_COUNTRY_FLAG = False
+FILL_COUNTRY_FLAG = True
 
 TS_TYPE_DIFFS = {
     "daily": np.timedelta64(12, "h"),
@@ -90,6 +94,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         filters=[],
         fill_country_flag: bool = FILL_COUNTRY_FLAG,
         tqdm_desc: [str, None] = None,
+        file_mask: str = FILE_MASK,
         ts_type: str = "hourly",
     ):
         self._stations = {}
@@ -99,11 +104,10 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
 
         if Path(filename).is_file():
             self._filename = filename
-            self._process_file(self._filename)
+            self._process_file(self._filename, fill_country_flag)
 
         elif Path(filename).is_dir():
-            self._filename = filename + ABSORB_FOLDER
-            files_pathlib = Path(self._filename).glob("*.nas")
+            files_pathlib = Path(filename).glob(file_mask)
             files = [x for x in files_pathlib if x.is_file()]
 
             if len(files) == 0:
@@ -113,19 +117,20 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
             bar = tqdm(desc=tqdm_desc, total=len(files))
             for file in files:
                 bar.update(1)
-                self._process_file(file)
+                self._process_file(file, fill_country_flag)
         else:
             raise ValueError(f"Given filename {filename} is neither a folder or a file")
 
-    def _process_file(self, file: Path):
+    def _process_file(self, file: Path, fill_country_flag: bool = FILL_COUNTRY_FLAG):
         with open(file, newline="") as f:
             lines = f.readlines()
-            self._process_open_file(lines, file)
+            self._process_open_file(lines, file, fill_country_flag)
 
-    def _process_open_file(self, lines: list[str], file: Path) -> None:
+    def _process_open_file(
+        self, lines: list[str], file: Path, fill_country_flag: bool = FILL_COUNTRY_FLAG
+    ) -> None:
         line_index = 0
-        data_start_line = int(lines[line_index].split()[0])
-        station = lines[INDECIES["CODE"]].split(":")[1].strip()
+        data_start_line = int(lines[line_index].replace(",", "").split()[0])
         long_name = lines[INDECIES["NAME"]].split(":")[1].strip()
 
         station = long_name
@@ -136,15 +141,18 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         lon = float(lines[INDECIES["LON"]].split(":")[1].strip())
         lat = float(lines[INDECIES["LAT"]].split(":")[1].strip())
         alt = float(lines[INDECIES["ALT"]].split(":")[1].strip()[:-1])
-        print(station)
+        country = "NN"
         if not station in self._stations:
+            if fill_country_flag:
+                country = self._lookup_function()(lat, lon)
+
             self._stations[station] = Station(
                 {
                     "station": station,
                     "longitude": lon,
                     "latitude": lat,
                     "altitude": alt,
-                    "country": self._lookup_function()(lat, lon),
+                    "country": country,
                     "url": str(file),
                     "long_name": station,
                 }
@@ -235,8 +243,3 @@ class NILUPMFAbsorptionTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine)
 
     def url(self):
         return "https://github.com/metno/pyaro-readers"
-
-
-if __name__ == "__main__":
-    file_name = "/lustre/storeB/project/fou/kl/emep/People/danielh/projects/pyaerocom/obs/nilu_pmf/cameo_2024/EIMPs_winter2017-2018_data/"
-    reader = NILUPMFAbsorptionReader(filename=file_name)
