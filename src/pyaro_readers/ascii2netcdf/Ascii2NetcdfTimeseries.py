@@ -163,10 +163,11 @@ class Ascii2NetcdfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             if not epdl in nc.variables:
                 return
             vdata = np.ma.filled(nc[epdl][:], np.nan)
-            if nc[epdl].units != data.units:
-                logger.warning(
-                    f"units-change for {varname} in {file}: {nc[epdl].units} != {data.units}"
-                )
+            if "units" in nc[epdl].ncattrs():
+                if nc[epdl].units != data.units:
+                    logger.warning(
+                        f"units-change for {varname} in {file}: {nc[epdl].units} != {data.units}"
+                    )
 
             # get all arrays into same size, time fastes moving, i.e. [station][time]
             dstruct = {}
@@ -203,7 +204,7 @@ class Ascii2NetcdfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             for key in dstruct.keys():
                 dstruct[key] = dstruct[key][idx]
 
-            dstruct["flags"] = dstruct["data"].astype("i4")
+            dstruct["flags"] = np.zeros(len(dstruct["data"]), "i4")
             dstruct["flags"][:] = Flag.VALID
 
             data.append(
