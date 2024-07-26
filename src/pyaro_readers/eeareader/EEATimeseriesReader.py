@@ -52,8 +52,12 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             )
         files = self._create_file_list(filename, species)
         lf = polars.scan_parquet(files)
+        df = lf.collect()
+        df = df.with_columns(
+            (polars.col("Samplingpoint").str.extract(r"(.*)/.*")).alias("Country Code")
+        )
 
-        return lf
+        return df
         # folder_list = self._create_file_list(filename, species_ids)
 
     def _create_file_list(self, root: Path, species: list[str]):
@@ -106,7 +110,7 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
 
 if __name__ == "__main__":
-    filters = {"variables": {"include": ["SO2", "PM10"]}}
+    filters = {"variables": {"include": ["SO2", "PM10", "PM2.5"]}}
     reader = EEATimeseriesReader(
         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data",
         filters=filters,
