@@ -65,7 +65,7 @@ class EEADownloader:
             save_loc.mkdir(parents=True, exist_ok=True)
 
         urls = urls.split("\r\n")[1:]
-        print(f"Starting with {request['countries']}")
+        # print(f"Starting with {request['countries']}")
         for url in urls:
             if len(url) < 2:
                 continue
@@ -74,7 +74,7 @@ class EEADownloader:
             result = requests.get(url)
             with open(save_loc / filename, "wb") as f:
                 f.write(result.content)
-        print(f"Done with {request['countries']}")
+        # print(f"Done with {request['countries']}")
 
     # def make_request_dict(self, countries: list = [], cities: list = [], properties: list = [], datasets: list = [1], source)
 
@@ -107,7 +107,7 @@ class EEADownloader:
 
         return urls
 
-    def download_default(self, save_loc: Path, dataset: list[int] = [1]):
+    def download_default(self, save_loc: Path, datasets: list[int] = [1]):
 
         if not save_loc.is_dir():
             save_loc.mkdir(parents=True, exist_ok=True)
@@ -115,25 +115,27 @@ class EEADownloader:
         countries = self.get_countries()
         threads = []
         for country in countries:
-            full_loc = save_loc / country
+            # print(f"Running for {country}")
+            for poll in self.DEFAULT_POLLUTANTS:
+                full_loc = save_loc / poll / country
 
-            request = {
-                "countries": [country],
-                "cities": [],
-                "properties": self.make_pollutant_url_list(self.DEFAULT_POLLUTANTS),
-                "datasets": datasets,
-                "source": "Api",
-            }
+                request = {
+                    "countries": [country],
+                    "cities": [],
+                    "properties": self.make_pollutant_url_list(poll),
+                    "datasets": datasets,
+                    "source": "Api",
+                }
 
-            thread = threading.Thread(
-                target=self.download_and_save,
-                args=(
-                    request,
-                    full_loc,
-                ),
-            )
-            thread.start()
-            threads.append(thread)
+                thread = threading.Thread(
+                    target=self.download_and_save,
+                    args=(
+                        request,
+                        full_loc,
+                    ),
+                )
+                thread.start()
+                threads.append(thread)
 
         for thread in threads:
             thread.join()
