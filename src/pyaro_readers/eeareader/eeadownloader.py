@@ -20,6 +20,13 @@ from tqdm import tqdm
 app = typer.Typer()
 
 
+DATABASES = dict(
+    NRT=1,
+    VERIFIED=2,
+    HISTORICAL=3,
+)
+
+
 class EEADownloader:
     BASE_URL = "https://eeadmz1-downloads-api-appservice.azurewebsites.net/"
     ENDPOINT = "ParquetFile/"
@@ -109,10 +116,18 @@ class EEADownloader:
             f.readline()
             for line in f:
                 words = line.split(",")
+                try:
+                    lon = float(words[3])
+                    lat = float(words[4])
+                    alt = float(words[5])
+                except:
+                    continue
                 metadata[words[0]] = {
-                    "lon": words[5],
-                    "lat": words[6],
-                    "alt": words[7],
+                    "lon": lon,
+                    "lat": lat,
+                    "alt": alt,
+                    "stationcode": words[2],
+                    "country": words[1],
                 }
 
         return metadata
@@ -135,12 +150,14 @@ class EEADownloader:
         return urls
 
     @app.command(name="download")
-    def download_default(self, save_loc: Path, datasets: list[int] = [1]) -> None:
+    def download_default(
+        self, save_loc: Path, dataset: int = DATABASES["VERIFIED"]
+    ) -> None:
 
         if not save_loc.is_dir():
             save_loc.mkdir(parents=True, exist_ok=True)
 
-        countries = self.get_countries()[:5]
+        countries = self.get_countries()
         threads = []
 
         errorfile = open("errors.txt", "w")
@@ -148,14 +165,16 @@ class EEADownloader:
         for country in pbar:
             # print(f"Running for {country}")
             pbar.set_description(f"{country}")
-            for poll in tqdm(self.DEFAULT_POLLUTANTS, desc="Pollutants", leave=False):
+            for poll in tqdm(
+                self.DEFAULT_POLLUTANTS[:2], desc="Pollutants", leave=False
+            ):
                 full_loc = save_loc / poll / country
 
                 request = {
                     "countries": [country],
                     "cities": [],
                     "properties": self.make_pollutant_url_list(poll),
-                    "datasets": datasets,
+                    "datasets": dataset,
                     "source": "Api",
                 }
                 self.download_and_save(request, full_loc)
@@ -180,26 +199,37 @@ class EEADownloader:
 
         errorfile.close()
 
-    def _postprocess_file(self, file: Path) -> pl.DataFrame:
-        metadata = self.get_station_metadata()
+    def _postprocess_file(self, file: Path, metadata: dict) -> pl.DataFrame:
+
         poll = self.get_pollutants()
 
         df = pl.read_parquet(file)
         pollutant = df.row(0)[1]
         station = df.row(0)[0].split("/")[-1]
+
+        if station not in metadata:
+            raise ValueError(f"Station {station} does not have float coordinates")
+
         length = df.shape[0]
         for name in metadata[station]:
-            series = pl.Series(name, [metadata[station][name]] * length)
+            value = metadata[station][name]
+            series = pl.Series(name, [value] * length)
             df.insert_column(1, series)
 
         series = pl.Series("PollutantName", [poll[str(pollutant)]] * length)
         df.insert_column(1, series)
+
+        df = df.with_columns(
+            (pl.col("Samplingpoint").str.extract(r"(.*)/.*")).alias("CountryCode")
+        )
 
         return df
 
     app.command(name="postprocess")
 
     def postprocess_all_files(self, from_folder: Path, to_folder: Path) -> None:
+
+        metadata = self.get_station_metadata()
 
         polls = [str(x).split("/")[-1] for x in from_folder.iterdir() if x.is_dir()]
         if not to_folder.is_dir():
@@ -212,7 +242,7 @@ class EEADownloader:
                 for x in (from_folder / poll).iterdir()
                 if x.is_dir()
             ]
-            for country in tqdm(countries, desc="Country"):
+            for country in tqdm(countries, desc="Country", leave=False):
                 folder = from_folder / poll / country
                 new_folder = to_folder / poll / country
 
@@ -220,19 +250,28 @@ class EEADownloader:
                     new_folder.mkdir(parents=True, exist_ok=True)
 
                 files = folder.glob("*.parquet")
-                for file in tqdm(files, desc="Files"):
+                for file in tqdm(files, desc="Files", leave=False):
                     try:
-                        df = self._postprocess_file(file)
+                        df = self._postprocess_file(file, metadata=metadata)
                         df.write_parquet(new_folder / file.name)
+
                     except Exception as e:
                         # raise ValueError(f"{file} failed with {e}")
                         error_n += 1
                         conversion_error.write(
-                            f"{error_n}: Error in converting {file} \n"
+                            f"{error_n}: Error in converting {file} due to {e}\n"
                         )
                         continue
         print(f"Finished with {error_n} errors")
         conversion_error.close()
+
+        # with open(to_folder / "metadata.csv", "w") as f:
+        #     f.write("filename, lon, lat, alt, Pollutant, CountryCode, StationName \n")
+        #     for entry in metadata:
+        #         item = metadata[entry]
+        #         f.write(
+        #             f'{entry}, {item["lon"]}, {item["lat"]}, {item["alt"]}, {item["Pollutant"]}, {item["CountryCode"]}, {item["StationName"]} \n'
+        #         )
         # new_filename = file.parent / f"processed_{file.name}"
         # df.write_parquet(new_filename)
 

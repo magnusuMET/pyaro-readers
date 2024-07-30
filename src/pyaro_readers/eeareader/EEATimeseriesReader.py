@@ -1,5 +1,5 @@
 import csv
-
+from tqdm import tqdm
 
 from geocoder_reverse_natural_earth import (
     Geocoder_Reverse_NE,
@@ -31,6 +31,31 @@ TS_TYPE_DIFFS = {
 }
 
 
+DTYPES = [
+    ("values", "f"),
+    ("stations", "U64"),
+    ("latitudes", "f"),
+    ("longitudes", "f"),
+    ("altitudes", "f"),
+    ("start_times", "datetime64[s]"),
+    ("end_times", "datetime64[s]"),
+    ("flags", "i2"),
+    ("standard_deviations", "f"),
+]
+
+
+PARQUET_FIELDS = dict(
+    values="Value",
+    stations="stationcode",
+    latitudes="lat",
+    longitudes="lon",
+    altitudes="alt",
+    start_times="Start",
+    end_times="End",
+    flags="Validity",
+)
+
+
 class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
     def __init__(
         self,
@@ -38,6 +63,10 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         filters={},
         fill_country_flag: bool = FILL_COUNTRY_FLAG,
     ):
+        self._filename = filename
+        self._stations = {}
+        self._data = {}  # var -> {data-array}
+
         species = filters["variables"]["include"]
         if len(species) == 0:
             raise ValueError(
@@ -50,20 +79,30 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             raise ValueError(
                 f"The filename must be an existing path where the data is found in folders with the country code as name"
             )
-        files = self._create_file_list(filename, species)
-        lf = polars.scan_parquet(files)
-        df = lf.collect()
-        df = df.with_columns(
-            (polars.col("Samplingpoint").str.extract(r"(.*)/.*")).alias("Country Code")
-        )
 
-        return df
+        for s in species:
+            files = self._create_file_list(filename, s)
+            lf = polars.scan_parquet(files)
+            df = lf.collect()
+            length = df.shape[0]
+
+            unit = df.row(0)[df.get_column_index("Unit")]
+
+            array = np.empty(length, np.dtype(DTYPES))
+            for key in tqdm(PARQUET_FIELDS):
+                print(key)
+                array[key] = df[PARQUET_FIELDS[key]].to_numpy()
+
+            data = NpStructuredData(variable=s, units=unit)
+
+            data.set_data(variable=s, units=unit, data=array)
+            self._data[s] = data
+
         # folder_list = self._create_file_list(filename, species_ids)
 
-    def _create_file_list(self, root: Path, species: list[str]):
-        results = []
-        for s in species:
-            results += [f for f in (root / s).glob("**/*.parquet")]
+    def _create_file_list(self, root: Path, species: str):
+
+        results = [f for f in (root / species).glob("**/*.parquet")]
         return results
 
     def _get_species_ids(self, species: list[str]) -> list[int]:
@@ -87,31 +126,24 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
     def close(self):
         pass
 
-    def is_valid_url(self, url):
-        try:
-            result = urlparse(url)
-            return all([result.scheme, result.netloc])
-        except ValueError:
-            return False
 
+class EEATimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):
+    def reader_class(self):
+        return EEATimeseriesReader
 
-# class AeronetSunTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):
-#     def reader_class(self):
-#         return AeronetSunTimeseriesReader
+    def open(self, filename, *args, **kwargs) -> EEATimeseriesReader:
+        return self.reader_class()(filename, *args, **kwargs)
 
-#     def open(self, filename, *args, **kwargs) -> AeronetSunTimeseriesReader:
-#         return self.reader_class()(filename, *args, **kwargs)
+    def description(self):
+        return "Reader for new EEA data API using the pyaro infrastructure."
 
-#     def description(self):
-#         return "Simple reader of AeronetSun-files using the pyaro infrastructure"
-
-#     def url(self):
-#         return "https://github.com/metno/pyaro-readers"
+    def url(self):
+        return "https://github.com/metno/pyaro-readers"
 
 
 if __name__ == "__main__":
-    filters = {"variables": {"include": ["SO2", "PM10", "PM2.5"]}}
-    reader = EEATimeseriesReader(
-        "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data",
+    filters = {"variables": {"include": ["PM10"]}}
+    EEATimeseriesReader(
+        "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/renamed/",
         filters=filters,
     )
