@@ -176,6 +176,9 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
                     np.nan,
                 )
 
+    def metadata(self):
+        return dict()
+    
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
 

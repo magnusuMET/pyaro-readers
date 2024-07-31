@@ -18,6 +18,7 @@ from pyaro.timeseries import (
     Station,
 )
 from tqdm import tqdm
+import hashlib
 
 # default URL
 BASE_URL = "https://aeronet.gsfc.nasa.gov/data_push/V3/All_Sites_Times_Daily_Averages_AOD20.zip"
@@ -109,6 +110,7 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         else:
             with open(self._filename, newline="") as csvfile:
                 lines = csvfile.readlines()
+                self._revisionstr = hashlib.md5("".join(lines).encode()).hexdigest()
 
         for _hidx in range(HEADER_LINE_NO - 1):
             self._header.append(lines.pop(0))
@@ -191,7 +193,14 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     value, station, lat, lon, alt, start, end, Flag.VALID, np.nan
                 )
         bar.close()
+    
+    def metadata(self):
+        metadata = dict()
+        if self._revisionstr is not None:
+            metadata["revision"] = self._revisionstr
 
+        return metadata
+    
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
 

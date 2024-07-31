@@ -67,6 +67,9 @@ class Netcdf_RWTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             raise Netcdf_RWTimeseriesException(f"unable to read definition-file: {ex}")
         return
 
+    def metadata(self):
+        return dict()
+    
     def _read_json(self, file, empty):
         filepath = os.path.join(self._directory, file)
         res = empty

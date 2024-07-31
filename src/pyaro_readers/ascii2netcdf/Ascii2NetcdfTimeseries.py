@@ -85,6 +85,9 @@ class Ascii2NetcdfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 )
         return
 
+    def metadata(self):
+        return dict()
+    
     def _is_year_in_filters(self, year):
         start_year = np.datetime64(f"{year}-01-01 00:00:00")
         end_year = np.datetime64(f"{year}-12-31 23:59:59")

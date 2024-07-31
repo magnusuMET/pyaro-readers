@@ -73,6 +73,9 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             # filename is something else
             raise EBASPMFReaderException(f"No such file or directory: {filename}")
 
+    def metadata(self): 
+        return dict()
+    
     def read_file_basic(
         self,
         filename: [Path, str],

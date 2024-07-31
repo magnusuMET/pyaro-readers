@@ -15,6 +15,7 @@ from pathlib import Path
 from tqdm import tqdm
 import cfunits
 from pyaro_readers.units_helpers import UALIASES
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
 
     def __init__(
         self,
-        file: [Path, str],
+        file: Path | str,
         filters=[],
         vars_to_read: list[str] = None,
     ):
@@ -96,6 +97,20 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                     _var,
                 )
         bar.close()
+
+    def metadata(self):
+        metadata = dict()
+
+        hash = ""
+        for f in self._files:
+            with xr.open_dataset(f) as d:
+                hist: str = d.attrs.get("history", "")
+
+                hash = hashlib.md5((hash+hist).encode()).hexdigest()
+
+        metadata["revision"] = hash
+
+        return metadata
 
     def _read_file_variables(self, filename) -> dict[str, str]:
         """Returns a mapping of variable name to unit for the dataset.

@@ -258,6 +258,9 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 )
         bar.close()
 
+    def metadata(self):
+        return dict()
+    
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
 
