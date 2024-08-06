@@ -64,7 +64,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         filename,
         filters=[],
         fill_country_flag: bool = FILL_COUNTRY_FLAG,
-        tqdm_desc: [str, None] = None,
+        tqdm_desc: str | None = None,
         file_mask: str = FILE_MASK,
         ts_type: str = "hourly",
     ):
@@ -177,7 +177,11 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
                 )
 
     def metadata(self):
-        return dict()
+        metadata = dict()
+
+        metadata["revision"] = 
+
+        return metadata
     
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]

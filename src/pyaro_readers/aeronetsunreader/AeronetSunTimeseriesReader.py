@@ -63,7 +63,7 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         filename,
         filters=[],
         fill_country_flag: bool = FILL_COUNTRY_FLAG,
-        tqdm_desc: [str, None] = None,
+        tqdm_desc: str | None = None,
         ts_type: str = "daily",
     ):
         """open a new Aeronet timeseries-reader
@@ -101,16 +101,18 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 for file in zip_ref.namelist():
                     with zip_ref.open(file) as response:
                         lines = [line.decode("utf-8") for line in response.readlines()]
+                        self._revisionstr = self._revison_str_from_lines(lines)
                     # read only 1st file here
                     break
             except BadZipFile:
                 response = urlopen(self._filename)
                 lines = [line.decode("utf-8") for line in response.readlines()]
+                self._revisionstr = self._revison_str_from_lines(lines)
 
         else:
             with open(self._filename, newline="") as csvfile:
                 lines = csvfile.readlines()
-                self._revisionstr = hashlib.md5("".join(lines).encode()).hexdigest()
+                self._revisionstr = self._revison_str_from_lines(lines)
 
         for _hidx in range(HEADER_LINE_NO - 1):
             self._header.append(lines.pop(0))
@@ -193,6 +195,21 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     value, station, lat, lon, alt, start, end, Flag.VALID, np.nan
                 )
         bar.close()
+    
+    def _revison_str_from_lines(self, lines: list[str]):
+        """Returns a revision string for a list of text lines. The revision
+        string is the hash resulting from joinint the lines together.
+
+        Parameters
+        ----------
+        lines :
+            A list of lines.
+
+        Returns
+        -------
+        An md5 hex digest.
+        """
+        return hashlib.md5("".join(lines).encode()).hexdigest()
     
     def metadata(self):
         metadata = dict()

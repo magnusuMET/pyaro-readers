@@ -86,7 +86,10 @@ class Ascii2NetcdfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         return
 
     def metadata(self):
-        return dict()
+        metadata = dict()
+        metadata["revision"] = None # TODO 
+        netCDF4.
+        return metadata
     
     def _is_year_in_filters(self, year):
         start_year = np.datetime64(f"{year}-01-01 00:00:00")

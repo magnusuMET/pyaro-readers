@@ -22,6 +22,8 @@ from geocoder_reverse_natural_earth import (
     Geocoder_Reverse_NE,
 )
 
+import hashlib
+
 # default URL
 BASE_URL = "https://aeronet.gsfc.nasa.gov/data_push/V3/All_Sites_Times_Daily_Averages_SDA20.zip"
 BASE_URL_TAR = (
@@ -111,6 +113,7 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 for file in zip_ref.namelist():
                     with zip_ref.open(file) as response:
                         lines = [line.decode("utf-8") for line in response.readlines()]
+                        self._revision = self._revision_string_from_lines(lines)
                     # read only 1st file here
                     break
             except BadZipFile:
@@ -146,6 +149,7 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                                 )
                             else:
                                 continue
+                    self._revision = self._revision_string_from_lines(lines)
 
                 # too many possible exceptions due to different tar possible tar file
                 # compressions. Just try to read as text if everything fails
@@ -155,12 +159,15 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     try:
                         response = urlopen(self._filename)
                         lines = [line.decode("utf-8") for line in response.readlines()]
+                        self._revision = self._revision_string_from_lines(lines)
                     except Exception as e:
                         print(e)
 
         else:
             with open(self._filename, newline="") as csvfile:
                 lines = csvfile.readlines()
+                self._revision = self._revision_string_from_lines(lines)
+
 
         for _hidx in range(HEADER_LINE_NO - 1):
             self._header.append(lines.pop(0))
@@ -257,9 +264,12 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     value, station, lat, lon, alt, start, end, Flag.VALID, np.nan
                 )
         bar.close()
+    
+    def _revision_string_from_lines(self, lines: list[str]) -> str:
+        return hashlib.md5("".join(lines).encode()).hexdigest()
 
     def metadata(self):
-        return dict()
+        return dict(revision = self._revision)
     
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
