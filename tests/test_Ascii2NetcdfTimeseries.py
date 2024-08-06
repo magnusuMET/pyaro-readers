@@ -23,6 +23,8 @@ class TestAscii2NetcdfTimeSeriesReader(unittest.TestCase):
             self.assertGreater(len(ts.variables()), 70)
             self.assertGreater(len(ts.stations()), 300)
 
+            self.assertIn("revision", ts.metadata())
+
     def test_2read(self):
         with pyaro.open_timeseries(
             self.engine, EBAS_URL, resolution="daily", filters=[]
@@ -31,6 +33,8 @@ class TestAscii2NetcdfTimeSeriesReader(unittest.TestCase):
             self.assertIn("AM0001", data.stations)
             self.assertGreater(np.sum(data.values), 10000)
             self.assertEqual(data.units, "ug")
+
+            self.assertIn("revision", ts.metadata())
 
     def test_3read(self):
         with pyaro.open_timeseries(
@@ -48,3 +52,5 @@ class TestAscii2NetcdfTimeSeriesReader(unittest.TestCase):
             self.assertEqual(
                 len(data.values[data.values > 4]), 1
             )  # one day (21.05. with extreme SO2)
+
+            self.assertIn("revision", ts.metadata())
