@@ -179,7 +179,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
     def metadata(self):
         metadata = dict()
 
-        metadata["revision"] = 
+        metadata["revision"] = None
 
         return metadata
     

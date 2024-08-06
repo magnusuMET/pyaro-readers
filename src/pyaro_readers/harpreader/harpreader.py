@@ -15,8 +15,8 @@ from pathlib import Path
 from tqdm import tqdm
 import cfunits
 from pyaro_readers.units_helpers import UALIASES
-import hashlib
-
+import datetime
+from functools import cache
 logger = logging.getLogger(__name__)
 
 
@@ -98,17 +98,20 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                 )
         bar.close()
 
+    @cache
     def metadata(self):
         metadata = dict()
-
-        hash = ""
+        date = datetime.datetime.min
         for f in self._files:
             with xr.open_dataset(f) as d:
                 hist: str = d.attrs.get("history", "")
-
-                hash = hashlib.md5((hash+hist).encode()).hexdigest()
-
-        metadata["revision"] = hash
+                
+                datestr = ":".join(hist.split(":")[:3])
+                new_date = datetime.datetime.strptime(datestr, "%a %b %d %H:%M:%S %Y")
+                if new_date > date:
+                    date = new_date
+                    
+        metadata["revision"] = str(date)
 
         return metadata
 
