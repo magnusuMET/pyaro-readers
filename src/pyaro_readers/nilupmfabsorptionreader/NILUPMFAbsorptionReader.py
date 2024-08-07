@@ -1,6 +1,7 @@
 from urllib.parse import urlparse
 from pathlib import Path
 import datetime
+import re
 
 from geocoder_reverse_natural_earth import Geocoder_Reverse_NE
 
@@ -178,9 +179,6 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
 
     def metadata(self):
         metadata = dict()
-
-        metadata["revision"] = None
-
         return metadata
     
     def _unfiltered_data(self, varname) -> Data:
@@ -207,7 +205,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         return lambda lat, lon: geo.lookup_nearest(lat, lon)["ISO_A2_EH"]
 
 
-class NILUPMFAbsorptionTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):
+class NILUPMFAbsorptionTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):#
     def reader_class(self):
         return NILUPMFAbsorptionReader
 
