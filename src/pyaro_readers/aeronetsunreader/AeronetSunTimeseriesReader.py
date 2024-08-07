@@ -195,7 +195,7 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     value, station, lat, lon, alt, start, end, Flag.VALID, np.nan
                 )
         bar.close()
-    
+
     def _revison_str_from_lines(self, lines: list[str]):
         """Returns a revision string for a list of text lines. The revision
         string is the hash resulting from joinint the lines together.
@@ -210,14 +210,14 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         An md5 hex digest.
         """
         return hashlib.md5("".join(lines).encode()).hexdigest()
-    
+
     def metadata(self):
         metadata = dict()
         if self._revisionstr is not None:
             metadata["revision"] = self._revisionstr
 
         return metadata
-    
+
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
 

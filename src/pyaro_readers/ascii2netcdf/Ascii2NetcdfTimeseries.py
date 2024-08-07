@@ -93,23 +93,22 @@ class Ascii2NetcdfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             if os.path.exists(file_path):
                 yield file_path
 
-
     def metadata(self):
         metadata = dict()
         date = datetime.datetime.min
         for f in self.iterate_files():
             with xr.open_dataset(f) as d:
                 hist: str = d.attrs.get("last_changed", "")
-                
+
                 datestr = hist.split("//")[0]
                 new_date = datetime.datetime.strptime(datestr, "%a %b %d %H:%M:%S %Y")
                 if new_date > date:
                     date = new_date
-                    
+
         metadata["revision"] = str(date)
 
         return metadata
-    
+
     def _is_year_in_filters(self, year):
         start_year = np.datetime64(f"{year}-01-01 00:00:00")
         end_year = np.datetime64(f"{year}-12-31 23:59:59")

@@ -75,12 +75,12 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         else:
             # filename is something else
             raise EBASPMFReaderException(f"No such file or directory: {filename}")
-    
+
     def metadata(self):
         metadata = dict()
-        metadata["revision"] = str(self._revision) 
+        metadata["revision"] = str(self._revision)
         return metadata
-    
+
     def read_file_basic(
         self,
         filename: Path | str,
@@ -105,7 +105,14 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         """Read EBAS NASA Ames file and put the data in the object"""
 
         _file_dummy = self.read_file_basic(filename)
-        self._revision = max([self._revision, datetime.datetime.strptime(_file_dummy.meta["revision_date"], "%Y%m%d%H%M%S")])
+        self._revision = max(
+            [
+                self._revision,
+                datetime.datetime.strptime(
+                    _file_dummy.meta["revision_date"], "%Y%m%d%H%M%S"
+                ),
+            ]
+        )
 
         matrix = _file_dummy.meta["matrix"]
         vars_read_in_file = []

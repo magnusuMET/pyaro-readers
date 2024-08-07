@@ -17,6 +17,7 @@ import cfunits
 from pyaro_readers.units_helpers import UALIASES
 import datetime
 from functools import cache
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,12 +106,12 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
         for f in self._files:
             with xr.open_dataset(f) as d:
                 hist: str = d.attrs.get("history", "")
-                
+
                 datestr = ":".join(hist.split(":")[:3])
                 new_date = datetime.datetime.strptime(datestr, "%a %b %d %H:%M:%S %Y")
                 if new_date > date:
                     date = new_date
-                    
+
         metadata["revision"] = str(date)
 
         return metadata

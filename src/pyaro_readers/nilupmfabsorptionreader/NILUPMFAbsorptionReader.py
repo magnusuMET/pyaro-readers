@@ -180,7 +180,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
     def metadata(self):
         metadata = dict()
         return metadata
-    
+
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
 
@@ -205,7 +205,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         return lambda lat, lon: geo.lookup_nearest(lat, lon)["ISO_A2_EH"]
 
 
-class NILUPMFAbsorptionTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):#
+class NILUPMFAbsorptionTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):  #
     def reader_class(self):
         return NILUPMFAbsorptionReader
 

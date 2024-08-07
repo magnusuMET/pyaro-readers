@@ -168,7 +168,6 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 lines = csvfile.readlines()
                 self._revision = self._revision_string_from_lines(lines)
 
-
         for _hidx in range(HEADER_LINE_NO - 1):
             self._header.append(lines.pop(0))
         # get fields from header line although csv can do that as well since we might want to adjust these names
@@ -264,13 +263,13 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     value, station, lat, lon, alt, start, end, Flag.VALID, np.nan
                 )
         bar.close()
-    
+
     def _revision_string_from_lines(self, lines: list[str]) -> str:
         return hashlib.md5("".join(lines).encode()).hexdigest()
 
     def metadata(self):
-        return dict(revision = self._revision)
-    
+        return dict(revision=self._revision)
+
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
 
