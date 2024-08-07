@@ -83,19 +83,20 @@ class Netcdf_RWTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             with xr.open_dataset(f) as d:
                 hist = d.attrs.get("last_changed", None)
 
-                if hist is not None:
-                    datestr = hist.split("//")[0]
-
-                else:
-                    hist = d.attrs.get("history", "")[-1]
-                    datestr = " ".join(hist.split(" ")[:2])
-
                 try:
+                    datestr = hist.split("//")[0]
                     new_date = datetime.datetime.strptime(
                         datestr, "%a %b %d %H:%M:%S %Y"
                     )
-                except:
-                    new_date = datetime.datetime.strptime(datestr, "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    try:
+                        hist = d.attrs.get("history", "")[-1]
+                        datestr = " ".join(hist.split(" ")[:2])
+                        new_date = datetime.datetime.strptime(
+                            datestr, "%Y-%m-%d %H:%M:%S"
+                        )
+                    except Exception:
+                        new_date = datetime.datetime.min
 
                 if new_date > date:
                     date = new_date
