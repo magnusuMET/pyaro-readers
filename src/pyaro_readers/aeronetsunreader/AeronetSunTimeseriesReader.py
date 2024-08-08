@@ -18,7 +18,7 @@ from pyaro.timeseries import (
     Station,
 )
 from tqdm import tqdm
-import hashlib
+import datetime
 
 # default URL
 BASE_URL = "https://aeronet.gsfc.nasa.gov/data_push/V3/All_Sites_Times_Daily_Averages_AOD20.zip"
@@ -91,7 +91,7 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._set_filters(filters)
         self._header = []
         _laststatstr = ""
-
+        self._revision = datetime.datetime.min
         # check if file is a URL
         if self.is_valid_url(self._filename):
             # try to open as zipfile
@@ -101,18 +101,15 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 for file in zip_ref.namelist():
                     with zip_ref.open(file) as response:
                         lines = [line.decode("utf-8") for line in response.readlines()]
-                        self._revisionstr = self._revison_str_from_lines(lines)
                     # read only 1st file here
                     break
             except BadZipFile:
                 response = urlopen(self._filename)
                 lines = [line.decode("utf-8") for line in response.readlines()]
-                self._revisionstr = self._revison_str_from_lines(lines)
 
         else:
             with open(self._filename, newline="") as csvfile:
                 lines = csvfile.readlines()
-                self._revisionstr = self._revison_str_from_lines(lines)
 
         for _hidx in range(HEADER_LINE_NO - 1):
             self._header.append(lines.pop(0))
@@ -169,6 +166,12 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             day, month, year = row[DATE_NAME].split(":")
             datestring = "-".join([year, month, day])
             datestring = "T".join([datestring, row[TIME_NAME]])
+            self._revision = max(
+                [
+                    self._revision,
+                    datetime.datetime.strptime(datestring, "%Y-%m-%dT%H:%M:%S"),
+                ]
+            )
             time_dummy = np.datetime64(datestring)
             start = time_dummy - TS_TYPE_DIFFS[ts_type]
             end = time_dummy + TS_TYPE_DIFFS[ts_type]
@@ -196,27 +199,8 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 )
         bar.close()
 
-    def _revison_str_from_lines(self, lines: list[str]):
-        """Returns a revision string for a list of text lines. The revision
-        string is the hash resulting from joinint the lines together.
-
-        Parameters
-        ----------
-        lines :
-            A list of lines.
-
-        Returns
-        -------
-        An md5 hex digest.
-        """
-        return hashlib.md5("".join(lines).encode()).hexdigest()
-
     def metadata(self):
-        metadata = dict()
-        if self._revisionstr is not None:
-            metadata["revision"] = self._revisionstr
-
-        return metadata
+        return dict(revision=datetime.datetime.strftime(self._revision, "%y%m%d%H%M%S"))
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]

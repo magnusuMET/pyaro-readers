@@ -23,8 +23,6 @@ from geocoder_reverse_natural_earth import (
     Geocoder_Reverse_NE,
 )
 
-import hashlib
-
 # default URL
 BASE_URL = "https://aeronet.gsfc.nasa.gov/data_push/V3/All_Sites_Times_Daily_Averages_SDA20.zip"
 BASE_URL_TAR = (
@@ -267,9 +265,6 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     value, station, lat, lon, alt, start, end, Flag.VALID, np.nan
                 )
         bar.close()
-
-    def _revision_string_from_lines(self, lines: list[str]) -> str:
-        return hashlib.md5("".join(lines).encode()).hexdigest()
 
     def metadata(self):
         return dict(revision=datetime.datetime.strftime(self._revision, "%y%m%d%H%M%S"))
