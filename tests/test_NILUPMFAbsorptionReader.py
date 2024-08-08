@@ -32,6 +32,7 @@ class TestPMFEBASTimeSeriesReader(unittest.TestCase):
             self.assertEqual(len(ts.stations()), 1)
 
             self.assertIn("revision", ts.metadata())
+            self.assertEqual(ts.metadata()["revision"], "180301000000")
 
     def test_2open_directory(self):
         with pyaro.open_timeseries(self.engine, self.testdata_dir, filters=[]) as ts:
@@ -40,6 +41,7 @@ class TestPMFEBASTimeSeriesReader(unittest.TestCase):
                 assert var in self.test_vars
 
             self.assertIn("revision", ts.metadata())
+            self.assertEqual(ts.metadata()["revision"], "180301000000")
 
 
 if __name__ == "__main__":

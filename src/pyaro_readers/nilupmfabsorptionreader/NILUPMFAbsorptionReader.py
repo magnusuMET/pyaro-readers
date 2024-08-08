@@ -1,7 +1,6 @@
 from urllib.parse import urlparse
 from pathlib import Path
 import datetime
-import hashlib
 
 from geocoder_reverse_natural_earth import Geocoder_Reverse_NE
 
@@ -73,7 +72,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         self._data = {}
         self._set_filters(filters)
         self._header = []
-        self._md5filehashes: list[str] = list()
+        self._revision = datetime.datetime.min
 
         if Path(filename).is_file():
             self._filename = filename
@@ -94,9 +93,6 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         else:
             raise ValueError(f"Given filename {filename} is neither a folder or a file")
 
-    def _revision_string_from_lines(self, lines: list[str]) -> str:
-        return hashlib.md5("".join(lines).encode()).hexdigest()
-
     def _process_file(self, file: Path, fill_country_flag: bool = FILL_COUNTRY_FLAG):
         with open(file, newline="") as f:
             lines = f.readlines()
@@ -109,12 +105,18 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         data_start_line = int(lines[line_index].replace(",", "").split()[0])
         long_name = lines[INDECIES["NAME"]].split(":")[1].strip()
 
-        self._md5filehashes.append(self._revision_string_from_lines(lines))
-
         station = long_name
 
         startdate = "".join(lines[INDECIES["DATES"]].split()[:3])
         startdate = datetime.datetime.strptime(startdate, "%Y%m%d")
+        self._revision = max(
+            [
+                self._revision,
+                datetime.datetime.strptime(
+                    " ".join(lines[INDECIES["DATES"]].split()[3:]), "%Y %m %d"
+                ),
+            ]
+        )
 
         lon = float(lines[INDECIES["LON"]].split(":")[1].strip())
         lat = float(lines[INDECIES["LAT"]].split(":")[1].strip())
@@ -184,11 +186,12 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
                 )
 
     def metadata(self):
-        metadata = dict()
-        metadata["revision"] = hashlib.md5(
-            "".join(self._md5filehashes).encode()
-        ).hexdigest()
-        return metadata
+        return dict(revision=datetime.datetime.strftime(self._revision, "%y%m%d%H%M%S"))
+        # metadata = dict()
+        # metadata["revision"] = hashlib.md5(
+        #    "".join(self._md5filehashes).encode()
+        # ).hexdigest()
+        # return metadata
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
