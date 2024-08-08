@@ -37,7 +37,7 @@ class TestHARPReader(unittest.TestCase):
                 self.assertGreaterEqual(len(ts.stations()), 1)
 
                 self.assertIn("revision", ts.metadata())
-                self.assertEqual(ts.metadata()["revision"], "2024-03-26 15:01:36")
+                self.assertEqual(ts.metadata()["revision"], "240326150136")
 
     def test_2open_directory(self):
         if os.path.exists(self.testdata_dir):
