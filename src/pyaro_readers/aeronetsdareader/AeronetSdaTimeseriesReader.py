@@ -5,6 +5,7 @@ from io import BytesIO
 from urllib.parse import urlparse
 from urllib.request import urlopen
 from zipfile import BadZipFile, ZipFile
+import datetime
 
 import numpy as np
 import requests
@@ -75,7 +76,7 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         filename,
         filters=[],
         fill_country_flag: bool = FILL_COUNTRY_FLAG,
-        tqdm_desc: [str, None] = None,
+        tqdm_desc: str | None = None,
         ts_type: str = "daily",
     ):
         """open a new csv timeseries-reader
@@ -103,6 +104,7 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._set_filters(filters)
         self._header = []
         _laststatstr = ""
+        self._revision = datetime.datetime.min
 
         # check if file is a URL
         if self.is_valid_url(self._filename):
@@ -113,7 +115,6 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 for file in zip_ref.namelist():
                     with zip_ref.open(file) as response:
                         lines = [line.decode("utf-8") for line in response.readlines()]
-                        self._revision = self._revision_string_from_lines(lines)
                     # read only 1st file here
                     break
             except BadZipFile:
@@ -149,7 +150,6 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                                 )
                             else:
                                 continue
-                    self._revision = self._revision_string_from_lines(lines)
 
                 # too many possible exceptions due to different tar possible tar file
                 # compressions. Just try to read as text if everything fails
@@ -159,14 +159,12 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     try:
                         response = urlopen(self._filename)
                         lines = [line.decode("utf-8") for line in response.readlines()]
-                        self._revision = self._revision_string_from_lines(lines)
                     except Exception as e:
                         print(e)
 
         else:
             with open(self._filename, newline="") as csvfile:
                 lines = csvfile.readlines()
-                self._revision = self._revision_string_from_lines(lines)
 
         for _hidx in range(HEADER_LINE_NO - 1):
             self._header.append(lines.pop(0))
@@ -223,6 +221,12 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             day, month, year = row[DATE_NAME].split(":")
             datestring = "-".join([year, month, day])
             datestring = "T".join([datestring, row[TIME_NAME]])
+            self._revision = max(
+                [
+                    self._revision,
+                    datetime.datetime.strptime(datestring, "%Y-%m-%dT%H:%M:%S"),
+                ]
+            )
             time_dummy = np.datetime64(datestring)
             start = time_dummy - TS_TYPE_DIFFS[ts_type]
             end = time_dummy + TS_TYPE_DIFFS[ts_type]
@@ -268,7 +272,7 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         return hashlib.md5("".join(lines).encode()).hexdigest()
 
     def metadata(self):
-        return dict(revision=self._revision)
+        return dict(revision=datetime.datetime.strftime(self._revision, "%y%m%d%H%M%S"))
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]

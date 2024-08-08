@@ -48,9 +48,7 @@ class TestAERONETTimeSeriesReader(unittest.TestCase):
             self.assertEqual(count, 421984)
             self.assertEqual(len(ts.stations()), 94)
             self.assertIn("revision", ts.metadata())
-            self.assertEqual(
-                ts.metadata()["revision"], "a4a2de1ef3a22514256c19adefb9e0d5"
-            )
+            self.assertEqual(ts.metadata()["revision"], "230726120000")
 
     def test_dl_data_unzipped(self):
         if not self.external_resource_available(TEST_URL):
@@ -68,9 +66,7 @@ class TestAERONETTimeSeriesReader(unittest.TestCase):
             self.assertEqual(count, 79944)
             self.assertEqual(len(ts.stations()), 4)
             self.assertIn("revision", ts.metadata())
-            self.assertEqual(
-                ts.metadata()["revision"], "0c6171c9664840b4f4def0616dbe5b21"
-            )
+            self.assertEqual(ts.metadata()["revision"], "220622120000")
 
     def test_dl_data_zipped(self):
         if not self.external_resource_available(TEST_ZIP_URL):
@@ -89,9 +85,7 @@ class TestAERONETTimeSeriesReader(unittest.TestCase):
             self.assertEqual(len(ts.stations()), 4)
 
             self.assertIn("revision", ts.metadata())
-            self.assertEqual(
-                ts.metadata()["revision"], "0c6171c9664840b4f4def0616dbe5b21"
-            )
+            self.assertEqual(ts.metadata()["revision"], "220622120000")
 
     def test_aeronet_data_zipped(self):
         if not os.path.exists("/lustre"):
@@ -113,9 +107,7 @@ class TestAERONETTimeSeriesReader(unittest.TestCase):
             self.assertGreaterEqual(len(ts.stations()), 4)
 
             self.assertIn("revision", ts.metadata())
-            self.assertEqual(
-                ts.metadata()["revision"], "d9ba8e645a625e86dc981aeedc54c02d"
-            )
+            self.assertEqual(ts.metadata()["revision"], "240523120000")
 
     def test_init(self):
         engine = pyaro.list_timeseries_engines()["aeronetsdareader"]
