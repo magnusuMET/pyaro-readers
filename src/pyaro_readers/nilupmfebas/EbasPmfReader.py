@@ -78,7 +78,9 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
     def metadata(self):
         metadata = dict()
-        metadata["revision"] = str(self._revision)
+        metadata["revision"] = datetime.datetime.strftime(
+            self._revision, "%y%m%d%H%M%S"
+        )
         return metadata
 
     def read_file_basic(

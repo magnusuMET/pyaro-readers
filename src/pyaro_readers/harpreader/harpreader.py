@@ -16,7 +16,6 @@ from tqdm import tqdm
 import cfunits
 from pyaro_readers.units_helpers import UALIASES
 import datetime
-from functools import cache
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +98,6 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                 )
         bar.close()
 
-    @cache
     def metadata(self):
         metadata = dict()
         date = datetime.datetime.min
@@ -112,7 +110,7 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                 if new_date > date:
                     date = new_date
 
-        metadata["revision"] = str(date)
+        metadata["revision"] = datetime.datetime.strftime(date, "%y%m%d%H%M%S")
 
         return metadata
 

@@ -105,7 +105,7 @@ class Ascii2NetcdfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 if new_date > date:
                     date = new_date
 
-        metadata["revision"] = str(date)
+        metadata["revision"] = datetime.datetime.strftime(date, "%y%m%d%H%M%S")
 
         return metadata
 
