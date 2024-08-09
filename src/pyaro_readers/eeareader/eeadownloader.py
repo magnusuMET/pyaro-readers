@@ -293,18 +293,17 @@ if __name__ == "__main__":
     # app()
 
     eead = EEADownloader()
-    eead.download_default(
-        Path(
-            "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
-        )
-    )
-    # df = eead.open_files("NO_EEA/E1a/*.parquet")
-    # breakpoint()
-    # eead.postprocess_all_files(
+    # eead.download_default(
     #     Path(
     #         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
-    #     ),
-    #     Path(
-    #         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/renamed"
-    #     ),
+    #     )
     # )
+
+    eead.postprocess_all_files(
+        Path(
+            "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
+        ),
+        Path(
+            "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/renamed"
+        ),
+    )
