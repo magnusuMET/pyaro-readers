@@ -15,6 +15,7 @@ from pathlib import Path
 from tqdm import tqdm
 import cfunits
 from pyaro_readers.units_helpers import UALIASES
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
 
     def __init__(
         self,
-        file: [Path, str],
+        file: Path | str,
         filters=[],
         vars_to_read: list[str] = None,
     ):
@@ -96,6 +97,22 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
                     _var,
                 )
         bar.close()
+
+    def metadata(self):
+        metadata = dict()
+        date = datetime.datetime.min
+        for f in self._files:
+            with xr.open_dataset(f) as d:
+                hist: str = d.attrs.get("history", "")
+
+                datestr = ":".join(hist.split(":")[:3])
+                new_date = datetime.datetime.strptime(datestr, "%a %b %d %H:%M:%S %Y")
+                if new_date > date:
+                    date = new_date
+
+        metadata["revision"] = datetime.datetime.strftime(date, "%y%m%d%H%M%S")
+
+        return metadata
 
     def _read_file_variables(self, filename) -> dict[str, str]:
         """Returns a mapping of variable name to unit for the dataset.

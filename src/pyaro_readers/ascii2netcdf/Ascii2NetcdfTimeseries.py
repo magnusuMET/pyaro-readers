@@ -1,4 +1,5 @@
 import csv
+import datetime
 import glob
 import inspect
 import logging
@@ -13,6 +14,7 @@ from pyaro.timeseries import (
     Station,
 )
 import pyaro.timeseries.Filter
+import xarray as xr
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +86,28 @@ class Ascii2NetcdfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     f"no stations: StationList.csv or {station_file} not found in {self._directory}"
                 )
         return
+
+    def iterate_files(self):
+        for y in self._years:
+            file_path = os.path.join(self._directory, f"data_{self._resolution}.{y}.nc")
+            if os.path.exists(file_path):
+                yield file_path
+
+    def metadata(self):
+        metadata = dict()
+        date = datetime.datetime.min
+        for f in self.iterate_files():
+            with xr.open_dataset(f) as d:
+                hist: str = d.attrs.get("last_changed", "")
+
+                datestr = hist.split("//")[0]
+                new_date = datetime.datetime.strptime(datestr, "%a %b %d %H:%M:%S %Y")
+                if new_date > date:
+                    date = new_date
+
+        metadata["revision"] = datetime.datetime.strftime(date, "%y%m%d%H%M%S")
+
+        return metadata
 
     def _is_year_in_filters(self, year):
         start_year = np.datetime64(f"{year}-01-01 00:00:00")

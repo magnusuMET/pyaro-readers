@@ -5,6 +5,7 @@ from io import BytesIO
 from urllib.parse import urlparse
 from urllib.request import urlopen
 from zipfile import BadZipFile, ZipFile
+import datetime
 
 import numpy as np
 import requests
@@ -73,7 +74,7 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         filename,
         filters=[],
         fill_country_flag: bool = FILL_COUNTRY_FLAG,
-        tqdm_desc: [str, None] = None,
+        tqdm_desc: str | None = None,
         ts_type: str = "daily",
     ):
         """open a new csv timeseries-reader
@@ -101,6 +102,7 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._set_filters(filters)
         self._header = []
         _laststatstr = ""
+        self._revision = datetime.datetime.min
 
         # check if file is a URL
         if self.is_valid_url(self._filename):
@@ -217,6 +219,12 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             day, month, year = row[DATE_NAME].split(":")
             datestring = "-".join([year, month, day])
             datestring = "T".join([datestring, row[TIME_NAME]])
+            self._revision = max(
+                [
+                    self._revision,
+                    datetime.datetime.strptime(datestring, "%Y-%m-%dT%H:%M:%S"),
+                ]
+            )
             time_dummy = np.datetime64(datestring)
             start = time_dummy - TS_TYPE_DIFFS[ts_type]
             end = time_dummy + TS_TYPE_DIFFS[ts_type]
@@ -257,6 +265,9 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     value, station, lat, lon, alt, start, end, Flag.VALID, np.nan
                 )
         bar.close()
+
+    def metadata(self):
+        return dict(revision=datetime.datetime.strftime(self._revision, "%y%m%d%H%M%S"))
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]

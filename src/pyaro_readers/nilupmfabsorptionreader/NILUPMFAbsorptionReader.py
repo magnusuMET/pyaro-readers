@@ -64,7 +64,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         filename,
         filters=[],
         fill_country_flag: bool = FILL_COUNTRY_FLAG,
-        tqdm_desc: [str, None] = None,
+        tqdm_desc: str | None = None,
         file_mask: str = FILE_MASK,
         ts_type: str = "hourly",
     ):
@@ -72,6 +72,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         self._data = {}
         self._set_filters(filters)
         self._header = []
+        self._revision = datetime.datetime.min
 
         if Path(filename).is_file():
             self._filename = filename
@@ -108,6 +109,14 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
 
         startdate = "".join(lines[INDECIES["DATES"]].split()[:3])
         startdate = datetime.datetime.strptime(startdate, "%Y%m%d")
+        self._revision = max(
+            [
+                self._revision,
+                datetime.datetime.strptime(
+                    " ".join(lines[INDECIES["DATES"]].split()[3:]), "%Y %m %d"
+                ),
+            ]
+        )
 
         lon = float(lines[INDECIES["LON"]].split(":")[1].strip())
         lat = float(lines[INDECIES["LAT"]].split(":")[1].strip())
@@ -176,6 +185,14 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
                     np.nan,
                 )
 
+    def metadata(self):
+        return dict(revision=datetime.datetime.strftime(self._revision, "%y%m%d%H%M%S"))
+        # metadata = dict()
+        # metadata["revision"] = hashlib.md5(
+        #    "".join(self._md5filehashes).encode()
+        # ).hexdigest()
+        # return metadata
+
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
 
@@ -200,7 +217,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
         return lambda lat, lon: geo.lookup_nearest(lat, lon)["ISO_A2_EH"]
 
 
-class NILUPMFAbsorptionTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):
+class NILUPMFAbsorptionTimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):  #
     def reader_class(self):
         return NILUPMFAbsorptionReader
 

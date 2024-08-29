@@ -13,6 +13,8 @@ from pyaro_readers.units_helpers import UALIASES
 
 from pathlib import Path
 import re
+import datetime
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +30,9 @@ class EBASPMFReaderException(Exception):
 class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
     def __init__(
         self,
-        filename: [Path, str],
+        filename: Path | str,
         filters=[],
-        tqdm_desc: [str, None] = None,
+        tqdm_desc: str | None = None,
         filemask: str = FILE_MASK,
         vars_to_read: list[str] = None,
     ):
@@ -42,6 +44,7 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._opts = {"default": ReadEbasOptions()}
         self._variables = {}
         self._metadata = {}
+        self._revision = datetime.datetime.min
 
         # variable include filter comes like this
         # {'variables': {'include': ['PM10_density']}}
@@ -73,9 +76,16 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             # filename is something else
             raise EBASPMFReaderException(f"No such file or directory: {filename}")
 
+    def metadata(self):
+        metadata = dict()
+        metadata["revision"] = datetime.datetime.strftime(
+            self._revision, "%y%m%d%H%M%S"
+        )
+        return metadata
+
     def read_file_basic(
         self,
-        filename: [Path, str],
+        filename: Path | str,
     ):
         """Read EBAS NASA Ames file
 
@@ -93,12 +103,22 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
         return data_out
 
-    def read_file(self, filename: [Path, str], vars_to_read: list[str] = None):
+    def read_file(self, filename: Path | str, vars_to_read: list[str] = None):
         """Read EBAS NASA Ames file and put the data in the object"""
 
         _file_dummy = self.read_file_basic(filename)
+        self._revision = max(
+            [
+                self._revision,
+                datetime.datetime.strptime(
+                    _file_dummy.meta["revision_date"], "%Y%m%d%H%M%S"
+                ),
+            ]
+        )
+
         matrix = _file_dummy.meta["matrix"]
         vars_read_in_file = []
+
         # multicolumn file: ebas var names come from _file_dummy.col_names_vars
         for var_idx, var_def in enumerate(_file_dummy.var_defs):
             # continue if the variable is not an actual data variable (but e.g. time)

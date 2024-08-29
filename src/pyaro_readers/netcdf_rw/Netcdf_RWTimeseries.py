@@ -13,6 +13,9 @@ from pyaro.timeseries import (
     Station,
 )
 import pyaro.timeseries.Filter
+import xarray as xr
+import datetime
+
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +69,41 @@ class Netcdf_RWTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         except Exception as ex:
             raise Netcdf_RWTimeseriesException(f"unable to read definition-file: {ex}")
         return
+
+    def iterate_files(self):
+        for y in self._years:
+            file_path = os.path.join(self._directory, f"{self.ncfile_prefix}.{y}.nc")
+            if os.path.exists(file_path):
+                yield file_path
+
+    def metadata(self):
+        metadata = dict()
+        date = datetime.datetime.min
+        for f in self.iterate_files():
+            with xr.open_dataset(f) as d:
+                hist = d.attrs.get("last_changed", None)
+
+                try:
+                    datestr = hist.split("//")[0]
+                    new_date = datetime.datetime.strptime(
+                        datestr, "%a %b %d %H:%M:%S %Y"
+                    )
+                except Exception:
+                    try:
+                        hist = d.attrs.get("history", "")[-1]
+                        datestr = " ".join(hist.split(" ")[:2])
+                        new_date = datetime.datetime.strptime(
+                            datestr, "%Y-%m-%d %H:%M:%S"
+                        )
+                    except Exception:
+                        new_date = datetime.datetime.min
+
+                if new_date > date:
+                    date = new_date
+
+        metadata["revision"] = datetime.datetime.strftime(date, "%y%m%d%H%M%S")
+
+        return metadata
 
     def _read_json(self, file, empty):
         filepath = os.path.join(self._directory, file)

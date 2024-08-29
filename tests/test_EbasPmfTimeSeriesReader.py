@@ -59,11 +59,15 @@ class TestPMFEBASTimeSeriesReader(unittest.TestCase):
                 assert var in self.test_vars
             self.assertEqual(len(ts.stations()), 1)
 
+            self.assertIn("revision", ts.metadata())
+
     def test_2open_directory(self):
         with pyaro.open_timeseries(self.engine, self.testdata_dir, filters=[]) as ts:
             self.assertGreaterEqual(len(ts.variables()), 1)
             for var in ts.variables():
                 assert var in self.test_vars
+
+            self.assertIn("revision", ts.metadata())
 
     def test_3open_ebascsvfile(self):
         dummy = read_ebas_flags_file(None)

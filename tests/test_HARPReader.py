@@ -36,6 +36,9 @@ class TestHARPReader(unittest.TestCase):
                 self.assertGreaterEqual(len(ts.variables()), 2)
                 self.assertGreaterEqual(len(ts.stations()), 1)
 
+                self.assertIn("revision", ts.metadata())
+                self.assertGreaterEqual(int(ts.metadata()["revision"]), 240326150136)
+
     def test_2open_directory(self):
         if os.path.exists(self.testdata_dir):
             with pyaro.open_timeseries(
@@ -46,6 +49,9 @@ class TestHARPReader(unittest.TestCase):
                     assert isinstance(data.units, str)
                 self.assertGreaterEqual(len(ts.variables()), 2)
                 self.assertGreaterEqual(len(ts.stations()), 7)
+
+                self.assertIn("revision", ts.metadata())
+
         else:
             pass
 

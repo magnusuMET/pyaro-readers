@@ -58,6 +58,8 @@ class TestNetcdf_RWTimeSeries(unittest.TestCase):
                 self.assertEqual(len(ts.variables()), len(ts_rw.variables()))
                 self.assertEqual(len(ts.stations()), len(ts_rw.stations()))
 
+                self.assertIn("revision", ts_rw.metadata())
+
     def test_3write(self):
         # write same data again, should not increase
         with pyaro.open_timeseries(

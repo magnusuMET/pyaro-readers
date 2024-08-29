@@ -18,6 +18,7 @@ from pyaro.timeseries import (
     Station,
 )
 from tqdm import tqdm
+import datetime
 
 # default URL
 BASE_URL = "https://aeronet.gsfc.nasa.gov/data_push/V3/All_Sites_Times_Daily_Averages_AOD20.zip"
@@ -62,7 +63,7 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         filename,
         filters=[],
         fill_country_flag: bool = FILL_COUNTRY_FLAG,
-        tqdm_desc: [str, None] = None,
+        tqdm_desc: str | None = None,
         ts_type: str = "daily",
     ):
         """open a new Aeronet timeseries-reader
@@ -90,7 +91,7 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._set_filters(filters)
         self._header = []
         _laststatstr = ""
-
+        self._revision = datetime.datetime.min
         # check if file is a URL
         if self.is_valid_url(self._filename):
             # try to open as zipfile
@@ -165,6 +166,12 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             day, month, year = row[DATE_NAME].split(":")
             datestring = "-".join([year, month, day])
             datestring = "T".join([datestring, row[TIME_NAME]])
+            self._revision = max(
+                [
+                    self._revision,
+                    datetime.datetime.strptime(datestring, "%Y-%m-%dT%H:%M:%S"),
+                ]
+            )
             time_dummy = np.datetime64(datestring)
             start = time_dummy - TS_TYPE_DIFFS[ts_type]
             end = time_dummy + TS_TYPE_DIFFS[ts_type]
@@ -191,6 +198,9 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     value, station, lat, lon, alt, start, end, Flag.VALID, np.nan
                 )
         bar.close()
+
+    def metadata(self):
+        return dict(revision=datetime.datetime.strftime(self._revision, "%y%m%d%H%M%S"))
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
