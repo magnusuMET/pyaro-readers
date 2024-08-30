@@ -72,7 +72,10 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._data = {}  # var -> {data-array}
         self._set_filters(filters)
 
-        species = filters["variables"]["include"]
+        try:
+            species = filters["variables"]["include"]
+        except:
+            species = []
 
         filter_time = False
         if "time_bounds" in filters:
@@ -89,7 +92,6 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             raise ValueError(
                 f"As of now, you have to give the species you want to read in filter.variables.include"
             )
-        species_ids = self._get_species_ids(species=species)
 
         filename = Path(filename)
         if not filename.is_dir():
@@ -98,6 +100,8 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             )
         for s in species:
             files = self._create_file_list(filename, s)
+            if len(files) == 0:
+                raise ValueError(f"could now find any files in {filename} for {s}")
 
             if filter_time:
                 datapoints = (
@@ -120,7 +124,6 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             current_idx = 0
 
             for file in tqdm(files, disable=None):
-
                 # Filters by time
                 if filter_time:
                     lf = self._filter_dates(
@@ -186,18 +189,8 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             self._data[s] = data
 
     def _create_file_list(self, root: Path, species: str):
-
         results = [f for f in (root / species).glob("**/*.parquet")]
         return results
-
-    def _get_species_ids(self, species: list[str]) -> list[int]:
-        ids = []
-        with open(DATA_TOML, "r") as f:
-            poll = toml.load(f)["pollutant"]
-            for key in poll:
-                if poll[key] in species:
-                    ids.append(key)
-        return ids
 
     def _filter_dates(
         self, lf: polars.LazyFrame | polars.DataFrame, dates: tuple[datetime]
@@ -235,18 +228,3 @@ class EEATimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):
 
     def url(self):
         return "https://github.com/metno/pyaro-readers"
-
-
-if __name__ == "__main__":
-    import pyaerocom as pya
-
-    print(pya.const.CACHEDIR)
-    # exit()
-    filters = {
-        "variables": {"include": ["PM10"]},
-        "time_bounds": {"start_include": [("2018-01-01 0:0:0", "2018-01-31 0:0:0")]},
-    }
-    EEATimeseriesReader(
-        "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/renamed/",
-        filters=filters,
-    )
