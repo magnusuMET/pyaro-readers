@@ -1,18 +1,14 @@
 import requests
-import pprint
+
 import polars as pl
 import typer
+from typing_extensions import Annotated
 
-# from pyarrow.dataset import dataset
-import json
-import pathlib
 from pathlib import Path
-import json
-import csv
-import toml
-import os
 
-import threading
+
+import toml
+
 
 from tqdm import tqdm
 
@@ -33,8 +29,8 @@ class EEADownloader:
     URL_ENDPOINT = "urls"
     URL_POLLUTANT = "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/"
 
-    METADATFILE = "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/metadata.csv"
-    DATAFILE = "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data.toml"
+    METADATFILE = Path(__file__).parent / "metadata.csv"
+    DATAFILE = Path(__file__).parent / "data.toml"
 
     DEFAULT_POLLUTANTS = [
         "SO2",
@@ -161,12 +157,14 @@ class EEADownloader:
         threads = []
 
         errorfile = open("errors.txt", "w")
-        pbar = tqdm(countries, desc="Countries")
+        pbar = tqdm(countries, desc="Countries", disable=None)
         for country in pbar:
-            # print(f"Running for {country}")
             pbar.set_description(f"{country}")
             for poll in tqdm(
-                self.DEFAULT_POLLUTANTS[:2], desc="Pollutants", leave=False
+                self.DEFAULT_POLLUTANTS[:2],
+                desc="Pollutants",
+                leave=False,
+                disable=None,
             ):
                 full_loc = save_loc / poll / country
 
@@ -178,24 +176,6 @@ class EEADownloader:
                     "source": "Api",
                 }
                 self.download_and_save(request, full_loc)
-                # try:
-                #     self.download_and_save(request, full_loc)
-                # except:
-                #     errorfile.write(f"Failed for {country}, {poll}")
-                #     continue
-
-                # thread = threading.Thread(
-                #     target=self.download_and_save,
-                #     args=(
-                #         request,
-                #         full_loc,
-                #     ),
-                # )
-        #         thread.start()
-        #         threads.append(thread)
-
-        # for thread in threads:
-        #     thread.join()
 
         errorfile.close()
 
@@ -236,13 +216,13 @@ class EEADownloader:
             to_folder.mkdir(parents=True, exist_ok=True)
         conversion_error = open(to_folder / "errors.txt", "w")
         error_n = 0
-        for poll in tqdm(polls, desc="Pollutant"):
+        for poll in tqdm(polls, desc="Pollutant", disable=None):
             countries = [
                 str(x).split("/")[-1]
                 for x in (from_folder / poll).iterdir()
                 if x.is_dir()
             ]
-            for country in tqdm(countries, desc="Country", leave=False):
+            for country in tqdm(countries, desc="Country", leave=False, disable=None):
                 folder = from_folder / poll / country
                 new_folder = to_folder / poll / country
 
@@ -250,13 +230,12 @@ class EEADownloader:
                     new_folder.mkdir(parents=True, exist_ok=True)
 
                 files = folder.glob("*.parquet")
-                for file in tqdm(files, desc="Files", leave=False):
+                for file in tqdm(files, desc="Files", leave=False, disable=None):
                     try:
                         df = self._postprocess_file(file, metadata=metadata)
                         df.write_parquet(new_folder / file.name)
 
                     except Exception as e:
-                        # raise ValueError(f"{file} failed with {e}")
                         error_n += 1
                         conversion_error.write(
                             f"{error_n}: Error in converting {file} due to {e}\n"
@@ -265,45 +244,52 @@ class EEADownloader:
         print(f"Finished with {error_n} errors")
         conversion_error.close()
 
-        # with open(to_folder / "metadata.csv", "w") as f:
-        #     f.write("filename, lon, lat, alt, Pollutant, CountryCode, StationName \n")
-        #     for entry in metadata:
-        #         item = metadata[entry]
-        #         f.write(
-        #             f'{entry}, {item["lon"]}, {item["lat"]}, {item["alt"]}, {item["Pollutant"]}, {item["CountryCode"]}, {item["StationName"]} \n'
-        #         )
-        # new_filename = file.parent / f"processed_{file.name}"
-        # df.write_parquet(new_filename)
 
-
-@app.command(name="download")
-def download(save_loc: Path):
+@app.command(
+    name="download",
+    help="Downloads the data in a given folder. Data will be orders in folders corresponding to pollutant and country code",
+)
+def download(
+    save_loc: Annotated[
+        Path, typer.Argument(help="Location where the data will be downloaded to")
+    ]
+):
     eead = EEADownloader()
     eead.download_default(save_loc)
 
 
-@app.command(name="postprocess")
-def postprocess(from_folder: Path, to_folder: Path):
+@app.command(
+    name="postprocess",
+    help="Postprocesses the data to make the reading by pyaro faster",
+)
+def postprocess(
+    from_folder: Annotated[
+        Path, typer.Argument(help="The folder where the original data is found")
+    ],
+    to_folder: Annotated[
+        Path, typer.Argument(help="Folder where the processes data will be stored")
+    ],
+):
     eead = EEADownloader()
     eead.postprocess_all_files(from_folder, to_folder)
 
 
 if __name__ == "__main__":
 
-    # app()
+    app()
 
-    eead = EEADownloader()
-    # eead.download_default(
+    # eead = EEADownloader()
+    # # eead.download_default(
+    # #     Path(
+    # #         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
+    # #     )
+    # # )
+
+    # eead.postprocess_all_files(
     #     Path(
     #         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
-    #     )
+    #     ),
+    #     Path(
+    #         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/renamed"
+    #     ),
     # )
-
-    eead.postprocess_all_files(
-        Path(
-            "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
-        ),
-        Path(
-            "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/renamed"
-        ),
-    )

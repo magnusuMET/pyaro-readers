@@ -22,7 +22,7 @@ from pyaro.timeseries import (
 
 FLAGS_VALID = {-99: False, -1: False, 1: True, 2: False, 3: False, 4: True}
 VERIFIED_LVL = [1, 2, 3]
-DATA_TOML = "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data.toml"
+DATA_TOML = Path(__file__).parent / "data.toml"
 FILL_COUNTRY_FLAG = False
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -57,7 +57,6 @@ PARQUET_FIELDS = dict(
     start_times="Start",
     end_times="End",
     flags="Validity",
-    #countries="country",
 )
 
 
@@ -78,10 +77,13 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         filter_time = False
         if "time_bounds" in filters:
             if "start_include" in filters["time_bounds"]:
-                start_date = datetime.strptime(filters["time_bounds"]["start_include"][0][0], TIME_FORMAT)
-                end_date = datetime.strptime(filters["time_bounds"]["start_include"][0][1], TIME_FORMAT)
+                start_date = datetime.strptime(
+                    filters["time_bounds"]["start_include"][0][0], TIME_FORMAT
+                )
+                end_date = datetime.strptime(
+                    filters["time_bounds"]["start_include"][0][1], TIME_FORMAT
+                )
                 filter_time = True
-
 
         if len(species) == 0:
             raise ValueError(
@@ -96,11 +98,19 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             )
         for s in species:
             files = self._create_file_list(filename, s)
-            if filter_time:
-                datapoints = self._filter_dates(polars.scan_parquet(files), (start_date, end_date)).select(polars.len()).collect()[0, 0]
-            else:
-                datapoints = polars.scan_parquet(files).select(polars.len()).collect()[0, 0]
 
+            if filter_time:
+                datapoints = (
+                    self._filter_dates(
+                        polars.scan_parquet(files), (start_date, end_date)
+                    )
+                    .select(polars.len())
+                    .collect()[0, 0]
+                )
+            else:
+                datapoints = (
+                    polars.scan_parquet(files).select(polars.len()).collect()[0, 0]
+                )
 
             array = np.empty(datapoints, np.dtype(DTYPES))
 
@@ -109,34 +119,33 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
             current_idx = 0
 
-            # if filter_time:
-            #     df = self._filter_dates(polars.scan_parquet(files), (start_date, end_date)).collect()
-            # else:
-            #     df = polars.scan_parquet(files).collect()
+            for file in tqdm(files, disable=None):
 
-            # for key in tqdm(PARQUET_FIELDS):
-            #         array[key] = df.get_column(PARQUET_FIELDS[key]).to_numpy()
-
-
-
-            for file in tqdm(files):
-                
+                # Filters by time
                 if filter_time:
-                    lf = self._filter_dates(polars.read_parquet(file), (start_date, end_date))
+                    lf = self._filter_dates(
+                        polars.read_parquet(file), (start_date, end_date)
+                    )
                     if lf.is_empty():
-                        #print(f"Empty filter for {file}")
                         continue
                 else:
                     lf = polars.read_parquet(file)
 
+                # Filters out invalid data
+                lf = lf.filter(polars.col(PARQUET_FIELDS["flags"]) > 0)
 
-                file_datapoints = lf.select(polars.len())[0,0]#.collect()
-                df = lf#.collect()
+                file_datapoints = lf.select(polars.len())[0, 0]
+
+                if file_datapoints == 0:
+                    continue
+                df = lf
 
                 file_unit = df.row(0)[df.get_column_index("Unit")]
 
                 for key in PARQUET_FIELDS:
-                    array[key][current_idx : current_idx + file_datapoints] = df.get_column(PARQUET_FIELDS[key]).to_numpy()
+                    array[key][current_idx : current_idx + file_datapoints] = (
+                        df.get_column(PARQUET_FIELDS[key]).to_numpy()
+                    )
 
                 current_idx += file_datapoints
 
@@ -147,20 +156,30 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                         raise ValueError(
                             f"Found multiple units ({file_unit} and {species_unit}) for same species {s}"
                         )
-                    
 
                 metadatarow = df.row(0)
                 station_fields = {
-                    "station": metadatarow[df.get_column_index(PARQUET_FIELDS["stations"])],
-                    "longitude": metadatarow[df.get_column_index(PARQUET_FIELDS["longitudes"])],
-                    "latitude": metadatarow[df.get_column_index(PARQUET_FIELDS["latitudes"])],
-                    "altitude": metadatarow[df.get_column_index(PARQUET_FIELDS["altitudes"])],
+                    "station": metadatarow[
+                        df.get_column_index(PARQUET_FIELDS["stations"])
+                    ],
+                    "longitude": metadatarow[
+                        df.get_column_index(PARQUET_FIELDS["longitudes"])
+                    ],
+                    "latitude": metadatarow[
+                        df.get_column_index(PARQUET_FIELDS["latitudes"])
+                    ],
+                    "altitude": metadatarow[
+                        df.get_column_index(PARQUET_FIELDS["altitudes"])
+                    ],
                     "country": metadatarow[df.get_column_index("country")],
                     "url": "",
-                    "long_name": metadatarow[df.get_column_index(PARQUET_FIELDS["stations"])],
+                    "long_name": metadatarow[
+                        df.get_column_index(PARQUET_FIELDS["stations"])
+                    ],
                 }
-                self._stations[metadatarow[df.get_column_index(PARQUET_FIELDS["stations"])]] = Station(station_fields)
-                
+                self._stations[
+                    metadatarow[df.get_column_index(PARQUET_FIELDS["stations"])]
+                ] = Station(station_fields)
 
             data = NpStructuredData(variable=s, units=species_unit)
             data.set_data(variable=s, units=species_unit, data=array)
@@ -179,12 +198,17 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 if poll[key] in species:
                     ids.append(key)
         return ids
-    
-    def _filter_dates(self, lf: polars.LazyFrame | polars.DataFrame, dates: tuple[datetime]) -> polars.LazyFrame | polars.DataFrame:
+
+    def _filter_dates(
+        self, lf: polars.LazyFrame | polars.DataFrame, dates: tuple[datetime]
+    ) -> polars.LazyFrame | polars.DataFrame:
         if dates[0] >= dates[1]:
-            raise ValueError(f"Error when filtering data. Last date {dates[1]} must be larger than the first {dates[0]}")
-        #return lf.with_columns(polars.col(PARQUET_FIELDS["start_times"]).str.strptime(polars.Date)).filter(polars.col(PARQUET_FIELDS["start_times"]).is_between(dates[0], dates[1]))
-        return lf.filter(polars.col(PARQUET_FIELDS["start_times"]).is_between(dates[0], dates[1]))
+            raise ValueError(
+                f"Error when filtering data. Last date {dates[1]} must be larger than the first {dates[0]}"
+            )
+        return lf.filter(
+            polars.col(PARQUET_FIELDS["start_times"]).is_between(dates[0], dates[1])
+        )
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
@@ -214,7 +238,14 @@ class EEATimeseriesEngine(AutoFilterReaderEngine.AutoFilterEngine):
 
 
 if __name__ == "__main__":
-    filters = {"variables": {"include": ["PM10"]}, "time": {"start": "2018-01-01", "stop": "2018-12-31"}}
+    import pyaerocom as pya
+
+    print(pya.const.CACHEDIR)
+    # exit()
+    filters = {
+        "variables": {"include": ["PM10"]},
+        "time_bounds": {"start_include": [("2018-01-01 0:0:0", "2018-01-31 0:0:0")]},
+    }
     EEATimeseriesReader(
         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/renamed/",
         filters=filters,
