@@ -1,4 +1,3 @@
-import csv
 from tqdm import tqdm
 from datetime import datetime
 
@@ -9,8 +8,6 @@ from geocoder_reverse_natural_earth import (
 import numpy as np
 from pathlib import Path
 import polars
-import glob
-import toml
 from pyaro.timeseries import (
     AutoFilterReaderEngine,
     Data,
