@@ -11,6 +11,7 @@ import tomli as tomllib
 
 
 from tqdm import tqdm
+import shutil
 
 
 app = typer.Typer()
@@ -80,6 +81,9 @@ class EEADownloader:
         else:
             raise results.raise_for_status()
 
+    def _copy_metadata_to_folder(self, to_folder: Path) -> None:
+        shutil.copyfile(self.METADATFILE, to_folder / "metadata.csv")
+
     def get_countries(self):
         country_file = requests.get(self.BASE_URL + "Country").json()
         return [country["countryCode"] for country in country_file]
@@ -134,6 +138,7 @@ class EEADownloader:
         if not save_loc.is_dir():
             save_loc.mkdir(parents=True, exist_ok=True)
 
+        self._copy_metadata_to_folder(save_loc)
         countries = self.get_countries()
 
         errorfile = open("errors.txt", "w")
@@ -194,6 +199,8 @@ class EEADownloader:
         polls = [str(x).split("/")[-1] for x in from_folder.iterdir() if x.is_dir()]
         if not to_folder.is_dir():
             to_folder.mkdir(parents=True, exist_ok=True)
+
+        self._copy_metadata_to_folder(to_folder)
         conversion_error = open(to_folder / "errors.txt", "w")
         error_n = 0
         for poll in tqdm(polls, desc="Pollutant", disable=None):
@@ -231,7 +238,10 @@ class EEADownloader:
 )
 def download(
     save_loc: Annotated[
-        Path, typer.Argument(help="Location where the data will be downloaded to")
+        Path,
+        typer.Argument(
+            help="Location where the data will be downloaded to. Deprecated!: The reader can now use the downloaded data directly"
+        ),
     ]
 ):
     eead = EEADownloader()
