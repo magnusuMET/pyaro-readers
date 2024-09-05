@@ -47,13 +47,16 @@ DTYPES = [
 
 PARQUET_FIELDS = dict(
     values="Value",
+    start_times="Start",
+    end_times="End",
+    flags="Validity",
+)
+
+METADATA_FILEDS = dict(
     stations="stationcode",
     latitudes="lat",
     longitudes="lon",
     altitudes="alt",
-    start_times="Start",
-    end_times="End",
-    flags="Validity",
 )
 
 
@@ -68,6 +71,37 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._stations = {}
         self._data = {}  # var -> {data-array}
         self._set_filters(filters)
+
+        self.metadata = self._read_metadata(filename)
+
+        self._read_polars(filters, filename)
+
+    def _read_metadata(self, folder: str) -> dict:
+        metadata = {}
+        filename = Path(folder) / "metadata.csv"
+        if not filename.exists():
+            raise FileExistsError(f"Metadata file could not be found in {folder}")
+        with open(filename, "r") as f:
+            f.readline()
+            for line in f:
+                words = line.split(", ")
+                try:
+                    lon = float(words[3])
+                    lat = float(words[4])
+                    alt = float(words[5])
+                except:
+                    continue
+                metadata[words[0]] = {
+                    "lon": lon,
+                    "lat": lat,
+                    "alt": alt,
+                    "stationcode": words[2],
+                    "country": words[1],
+                }
+
+        return metadata
+
+    def _read_polars(self, filters, filename) -> None:
 
         try:
             species = filters["variables"]["include"]
@@ -140,11 +174,18 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     continue
                 df = lf
 
+                station_metadata = self.metadata[df.row(0)[0].split("/")[-1]]
+
                 file_unit = df.row(0)[df.get_column_index("Unit")]
 
                 for key in PARQUET_FIELDS:
                     array[key][current_idx : current_idx + file_datapoints] = (
                         df.get_column(PARQUET_FIELDS[key]).to_numpy()
+                    )
+
+                for key, value in METADATA_FILEDS.items():
+                    array[key][current_idx : current_idx + file_datapoints] = (
+                        station_metadata[value]
                     )
 
                 current_idx += file_datapoints
@@ -157,29 +198,18 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                             f"Found multiple units ({file_unit} and {species_unit}) for same species {s}"
                         )
 
-                metadatarow = df.row(0)
                 station_fields = {
-                    "station": metadatarow[
-                        df.get_column_index(PARQUET_FIELDS["stations"])
-                    ],
-                    "longitude": metadatarow[
-                        df.get_column_index(PARQUET_FIELDS["longitudes"])
-                    ],
-                    "latitude": metadatarow[
-                        df.get_column_index(PARQUET_FIELDS["latitudes"])
-                    ],
-                    "altitude": metadatarow[
-                        df.get_column_index(PARQUET_FIELDS["altitudes"])
-                    ],
-                    "country": metadatarow[df.get_column_index("country")],
+                    "station": station_metadata[METADATA_FILEDS["stations"]],
+                    "longitude": station_metadata[METADATA_FILEDS["longitudes"]],
+                    "latitude": station_metadata[METADATA_FILEDS["latitudes"]],
+                    "altitude": station_metadata[METADATA_FILEDS["altitudes"]],
+                    "country": station_metadata["country"],
                     "url": "",
-                    "long_name": metadatarow[
-                        df.get_column_index(PARQUET_FIELDS["stations"])
-                    ],
+                    "long_name": station_metadata[METADATA_FILEDS["stations"]],
                 }
-                self._stations[
-                    metadatarow[df.get_column_index(PARQUET_FIELDS["stations"])]
-                ] = Station(station_fields)
+                self._stations[station_metadata[METADATA_FILEDS["stations"]]] = Station(
+                    station_fields
+                )
 
             data = NpStructuredData(variable=s, units=species_unit)
             data.set_data(variable=s, units=species_unit, data=array)
