@@ -1,5 +1,4 @@
 import requests
-import sys
 import polars as pl
 import typer
 from typing_extensions import Annotated
@@ -7,9 +6,9 @@ from typing_extensions import Annotated
 from pathlib import Path
 
 
-if sys.version_info.minor >= 11:
+try:
     import tomllib
-else:
+except ImportError:  # python <3.11
     import tomli as tomllib
 
 

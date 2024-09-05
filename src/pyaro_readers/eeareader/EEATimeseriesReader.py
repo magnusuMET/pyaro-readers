@@ -168,14 +168,14 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 file_unit = df.row(0)[df.get_column_index("Unit")]
 
                 for key in PARQUET_FIELDS:
-                    array[key][current_idx : current_idx + file_datapoints] = (
-                        df.get_column(PARQUET_FIELDS[key]).to_numpy()
-                    )
+                    array[key][
+                        current_idx : current_idx + file_datapoints
+                    ] = df.get_column(PARQUET_FIELDS[key]).to_numpy()
 
                 for key, value in METADATA_FILEDS.items():
-                    array[key][current_idx : current_idx + file_datapoints] = (
-                        station_metadata[value]
-                    )
+                    array[key][
+                        current_idx : current_idx + file_datapoints
+                    ] = station_metadata[value]
 
                 current_idx += file_datapoints
 
