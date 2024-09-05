@@ -7,7 +7,7 @@ from typing_extensions import Annotated
 from pathlib import Path
 
 
-from tomli import tomllib
+import tomli as tomllib
 
 
 from tqdm import tqdm
@@ -31,7 +31,6 @@ class EEADownloader:
 
     METADATFILE = Path(__file__).parent / "metadata.csv"
     DATAFILE = Path(__file__).parent / "data.toml"
-
 
     request_body = dict(contries=[], cities=[], properties=[], datasets=[], source="")
 
@@ -108,21 +107,19 @@ class EEADownloader:
         return metadata
 
     def get_pollutants(self) -> dict:
-        with open(self.DATAFILE, "r") as f:
-            poll = tomlib.load(f)["pollutant"]
+        with open(self.DATAFILE, "rb") as f:
+            poll = tomllib.load(f)["pollutant"]
         return poll
-    
+
     def get_default_pollutants(self) -> list[str]:
-        with open(self.DATAFILE, "r") as f:
-            poll = tomlib.load(f)["defaults"]["pollutants"]
+        with open(self.DATAFILE, "rb") as f:
+            poll = tomllib.load(f)["defaults"]["pollutants"]
         return poll
 
     def make_pollutant_url_list(self, pollutants: list[str]) -> list[str]:
         urls = []
-        with open(
-            self.DATAFILE
-        ) as f:
-            poll = tomlib.load(f)["pollutant"]
+        with open(self.DATAFILE, "rb") as f:
+            poll = tomllib.load(f)["pollutant"]
             for key in poll:
                 if poll[key] in pollutants:
                     urls.append(self.URL_POLLUTANT + key)
@@ -258,21 +255,21 @@ def postprocess(
 
 
 if __name__ == "__main__":
+    app()
 
 
+# eead = EEADownloader()
+# # eead.download_default(
+# #     Path(
+# #         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
+# #     )
+# # )
 
-    # eead = EEADownloader()
-    # # eead.download_default(
-    # #     Path(
-    # #         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
-    # #     )
-    # # )
-
-    # eead.postprocess_all_files(
-    #     Path(
-    #         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
-    #     ),
-    #     Path(
-    #         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/renamed"
-    #     ),
-    # )
+# eead.postprocess_all_files(
+#     Path(
+#         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
+#     ),
+#     Path(
+#         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/renamed"
+#     ),
+# )
