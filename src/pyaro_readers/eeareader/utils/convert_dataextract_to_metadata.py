@@ -1,5 +1,5 @@
 """
-DataExtract.csv must be downloaded from https://discomap.eea.europa.eu/App/AQViewer/index.html?fqn=Airquality_Dissem.b2g.measurements 
+DataExtract.csv must be downloaded from https://discomap.eea.europa.eu/App/AQViewer/index.html?fqn=Airquality_Dissem.b2g.measurements
 """
 
 import csv

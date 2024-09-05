@@ -70,7 +70,6 @@ class EEADownloader:
             except Exception as e:
                 raise ValueError(f"{url} failed to download due to {e}")
             with open(save_loc / filename, "wb") as f:
-
                 f.write(result.content)
 
     def _make_request(self, request: dict):
@@ -134,7 +133,6 @@ class EEADownloader:
     def download_default(
         self, save_loc: Path, dataset: int = DATABASES["VERIFIED"]
     ) -> None:
-
         if not save_loc.is_dir():
             save_loc.mkdir(parents=True, exist_ok=True)
 
@@ -165,7 +163,6 @@ class EEADownloader:
         errorfile.close()
 
     def _postprocess_file(self, file: Path, metadata: dict) -> pl.DataFrame:
-
         poll = self.get_pollutants()
 
         df = pl.read_parquet(file)
@@ -193,7 +190,6 @@ class EEADownloader:
     app.command(name="postprocess")
 
     def postprocess_all_files(self, from_folder: Path, to_folder: Path) -> None:
-
         metadata = self.get_station_metadata()
 
         polls = [str(x).split("/")[-1] for x in from_folder.iterdir() if x.is_dir()]
@@ -242,7 +238,7 @@ def download(
         typer.Argument(
             help="Location where the data will be downloaded to. Deprecated!: The reader can now use the downloaded data directly"
         ),
-    ]
+    ],
 ):
     eead = EEADownloader()
     eead.download_default(save_loc)

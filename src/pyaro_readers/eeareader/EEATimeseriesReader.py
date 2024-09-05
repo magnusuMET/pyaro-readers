@@ -102,7 +102,6 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         return metadata
 
     def _read_polars(self, filters, filename) -> None:
-
         try:
             species = filters["variables"]["include"]
         except:
