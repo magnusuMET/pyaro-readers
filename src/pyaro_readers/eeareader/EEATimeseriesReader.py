@@ -1,5 +1,5 @@
 from tqdm import tqdm
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from geocoder_reverse_natural_earth import (
     Geocoder_Reverse_NE,
@@ -76,31 +76,6 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
         self._read_polars(filters, filename)
 
-    def _read_metadata(self, folder: str) -> dict:
-        metadata = {}
-        filename = Path(folder) / "metadata.csv"
-        if not filename.exists():
-            raise FileExistsError(f"Metadata file could not be found in {folder}")
-        with open(filename, "r") as f:
-            f.readline()
-            for line in f:
-                words = line.split(", ")
-                try:
-                    lon = float(words[3])
-                    lat = float(words[4])
-                    alt = float(words[5])
-                except:
-                    continue
-                metadata[words[0]] = {
-                    "lon": lon,
-                    "lat": lat,
-                    "alt": alt,
-                    "stationcode": words[2],
-                    "country": words[1],
-                }
-
-        return metadata
-
     def _read_polars(self, filters, filename) -> None:
         try:
             species = filters["variables"]["include"]
@@ -167,6 +142,21 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 # Filters out invalid data
                 lf = lf.filter(polars.col(PARQUET_FIELDS["flags"]) > 0)
 
+                # Changes timezones
+                lf = lf.with_columns(
+                    polars.col(PARQUET_FIELDS["start_times"])
+                    .dt.replace_time_zone("Etc/GMT-1")
+                    .dt.convert_time_zone("UTC")
+                    .alias(PARQUET_FIELDS["start_times"])
+                )
+
+                lf = lf.with_columns(
+                    polars.col(PARQUET_FIELDS["end_times"])
+                    .dt.replace_time_zone("Etc/GMT-1")
+                    .dt.convert_time_zone("UTC")
+                    .alias(PARQUET_FIELDS["end_times"])
+                )
+
                 file_datapoints = lf.select(polars.len())[0, 0]
 
                 if file_datapoints == 0:
@@ -225,9 +215,37 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
             raise ValueError(
                 f"Error when filtering data. Last date {dates[1]} must be larger than the first {dates[0]}"
             )
+
         return lf.filter(
-            polars.col(PARQUET_FIELDS["start_times"]).is_between(dates[0], dates[1])
+            polars.col(PARQUET_FIELDS["start_times"]).is_between(
+                dates[0] + timedelta(hours=1), dates[1] + timedelta(hours=1)
+            )
         )
+
+    def _read_metadata(self, folder: str) -> dict:
+        metadata = {}
+        filename = Path(folder) / "metadata.csv"
+        if not filename.exists():
+            raise FileExistsError(f"Metadata file could not be found in {folder}")
+        with open(filename, "r") as f:
+            f.readline()
+            for line in f:
+                words = line.split(", ")
+                try:
+                    lon = float(words[3])
+                    lat = float(words[4])
+                    alt = float(words[5])
+                except:
+                    continue
+                metadata[words[0]] = {
+                    "lon": lon,
+                    "lat": lat,
+                    "alt": alt,
+                    "stationcode": words[2],
+                    "country": words[1],
+                }
+
+        return metadata
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]

@@ -1,5 +1,5 @@
 import requests
-
+import sys
 import polars as pl
 import typer
 from typing_extensions import Annotated
@@ -7,7 +7,10 @@ from typing_extensions import Annotated
 from pathlib import Path
 
 
-import tomli as tomllib
+if sys.version_info.minor >= 11:
+    import tomllib
+else:
+    import tomli as tomllib
 
 
 from tqdm import tqdm
