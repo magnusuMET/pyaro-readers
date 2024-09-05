@@ -7,7 +7,7 @@ from typing_extensions import Annotated
 from pathlib import Path
 
 
-import toml
+from tomli import tomllib
 
 
 from tqdm import tqdm
@@ -32,27 +32,6 @@ class EEADownloader:
     METADATFILE = Path(__file__).parent / "metadata.csv"
     DATAFILE = Path(__file__).parent / "data.toml"
 
-    DEFAULT_POLLUTANTS = [
-        "SO2",
-        "PM10",
-        "PM2.5",
-        "O3",
-        "NO2",
-        "CO",
-        "NO",
-        "OC",
-        "EC",
-        "C6H6",
-        "EC in PM2.5",
-        "OC in PM2.5",
-        "EC in PM10",
-        "OC in PM10",
-        "NH4+ in PM2.5",
-        "NO3- in PM2.5",
-        "NH4+ in PM10",
-        "NO3- in PM10",
-        "HNO3",
-    ]
 
     request_body = dict(contries=[], cities=[], properties=[], datasets=[], source="")
 
@@ -130,15 +109,20 @@ class EEADownloader:
 
     def get_pollutants(self) -> dict:
         with open(self.DATAFILE, "r") as f:
-            poll = toml.load(f)["pollutant"]
+            poll = tomlib.load(f)["pollutant"]
+        return poll
+    
+    def get_default_pollutants(self) -> list[str]:
+        with open(self.DATAFILE, "r") as f:
+            poll = tomlib.load(f)["defaults"]["pollutants"]
         return poll
 
     def make_pollutant_url_list(self, pollutants: list[str]) -> list[str]:
         urls = []
         with open(
-            "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data.toml"
+            self.DATAFILE
         ) as f:
-            poll = toml.load(f)["pollutant"]
+            poll = tomlib.load(f)["pollutant"]
             for key in poll:
                 if poll[key] in pollutants:
                     urls.append(self.URL_POLLUTANT + key)
@@ -154,14 +138,13 @@ class EEADownloader:
             save_loc.mkdir(parents=True, exist_ok=True)
 
         countries = self.get_countries()
-        threads = []
 
         errorfile = open("errors.txt", "w")
         pbar = tqdm(countries, desc="Countries", disable=None)
         for country in pbar:
             pbar.set_description(f"{country}")
             for poll in tqdm(
-                self.DEFAULT_POLLUTANTS[:2],
+                self.get_default_pollutants()[:2],
                 desc="Pollutants",
                 leave=False,
                 disable=None,
@@ -276,7 +259,7 @@ def postprocess(
 
 if __name__ == "__main__":
 
-    app()
+
 
     # eead = EEADownloader()
     # # eead.download_default(

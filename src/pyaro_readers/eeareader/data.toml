@@ -1,3 +1,26 @@
+[defaults]
+"pollutants" = [
+    "SO2",
+    "PM10",
+    "PM2.5",
+    "O3",
+    "NO2",
+    "CO",
+    "NO",
+    "OC",
+    "EC",
+    "C6H6",
+    "EC in PM2.5",
+    "OC in PM2.5",
+    "EC in PM10",
+    "OC in PM10",
+    "NH4+ in PM2.5",
+    "NO3- in PM2.5",
+    "NH4+ in PM10",
+    "NO3- in PM10",
+    "HNO3",
+]
+
 [units]
 "Bq" = "Bq"
 "fg.m-3" = "fg/m3"
