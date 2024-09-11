@@ -73,7 +73,7 @@ class AeronetHARPReader(AutoFilterReaderEngine.AutoFilterReader):
         else:
             self._files.append(file)
 
-        bar = tqdm(total=len(self._files))
+        bar = tqdm(total=len(self._files), disable=None)
 
         for f_idx, _file in enumerate(self._files):
             logger.info(f"Reading {_file}")

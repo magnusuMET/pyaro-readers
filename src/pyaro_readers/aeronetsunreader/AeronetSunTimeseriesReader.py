@@ -118,7 +118,7 @@ class AeronetSunTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
         gcd = Geocoder_Reverse_NE()
         crd = csv.DictReader(lines, fieldnames=self._fields, delimiter=DELIMITER)
-        bar = tqdm(desc=tqdm_desc, total=len(lines))
+        bar = tqdm(desc=tqdm_desc, total=len(lines), disable=None)
         for _ridx, row in enumerate(crd):
             bar.update(1)
             if row[SITE_NAME] != _laststatstr:

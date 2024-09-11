@@ -129,7 +129,11 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                         lines = []
                         _fidx = 0
                         members = tf.getmembers()
-                        bar = tqdm(desc="extracting tar file...", total=len(members))
+                        bar = tqdm(
+                            desc="extracting tar file...",
+                            total=len(members),
+                            disable=None,
+                        )
                         for _midx, member in enumerate(members):
                             if fnmatch(member.name, FILE_MASK):
                                 bar.update(1)
@@ -171,7 +175,7 @@ class AeronetSdaTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
         gcd = Geocoder_Reverse_NE()
         crd = csv.DictReader(lines, fieldnames=self._fields, delimiter=DELIMITER)
-        bar = tqdm(desc=tqdm_desc, total=len(lines))
+        bar = tqdm(desc=tqdm_desc, total=len(lines), disable=None)
         for _ridx, row in enumerate(crd):
             bar.update(1)
             if row[SITE_NAME] != _laststatstr:
