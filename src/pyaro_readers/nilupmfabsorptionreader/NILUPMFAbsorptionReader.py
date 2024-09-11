@@ -86,7 +86,7 @@ class NILUPMFAbsorptionReader(AutoFilterReaderEngine.AutoFilterReader):
                 raise ValueError(
                     f"Could not find any nas files in given folder {self._filename}"
                 )
-            bar = tqdm(desc=tqdm_desc, total=len(files))
+            bar = tqdm(desc=tqdm_desc, total=len(files), disable=None)
             for file in files:
                 bar.update(1)
                 self._process_file(file, fill_country_flag)

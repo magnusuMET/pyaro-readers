@@ -60,7 +60,7 @@ class EbasPmfTimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         if Path(realpath).is_dir():
             # search directory for files
             files = list(realpath.glob(filemask))
-            bar = tqdm(desc=tqdm_desc, total=len(files))
+            bar = tqdm(desc=tqdm_desc, total=len(files), disable=None)
 
             for _ridx, file in enumerate(files):
                 bar.update(1)
