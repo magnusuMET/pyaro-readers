@@ -53,6 +53,7 @@ class EEADownloader:
             raise results.raise_for_status()
 
     def download_and_save(self, request: dict, save_loc: Path) -> None:
+        breakpoint()
         urls = self._get_urls(request)
 
         if not save_loc.is_dir():
@@ -133,7 +134,7 @@ class EEADownloader:
 
     @app.command(name="download")
     def download_default(
-        self, save_loc: Path, dataset: int = DATABASES["VERIFIED"]
+        self, save_loc: Path, dataset: int = DATABASES["VERIFIED"], pollutants: list | None= None,
     ) -> None:
         if not save_loc.is_dir():
             save_loc.mkdir(parents=True, exist_ok=True)
@@ -142,17 +143,19 @@ class EEADownloader:
         countries = self.get_countries()
 
         errorfile = open("errors.txt", "w")
+        if pollutants is None:
+            pollutants = self.get_default_pollutants()
+
         pbar = tqdm(countries, desc="Countries", disable=None)
         for country in pbar:
             pbar.set_description(f"{country}")
             for poll in tqdm(
-                self.get_default_pollutants()[:2],
+                pollutants,
                 desc="Pollutants",
                 leave=False,
                 disable=None,
             ):
                 full_loc = save_loc / poll / country
-
                 request = {
                     "countries": [country],
                     "cities": [],
@@ -263,15 +266,21 @@ def postprocess(
 
 
 if __name__ == "__main__":
-    app()
+    #app()
 
+    pollutants = [
+        "SO2",
+        "SO4--",
+        "SO4 (H2SO4 aerosols) (SO4--)",
+    ]
+    eead = EEADownloader()
+    eead.download_default(
+        Path(
+            "/nird/home/dulte/data/EEA"
+        ),
+        pollutants = pollutants
 
-# eead = EEADownloader()
-# # eead.download_default(
-# #     Path(
-# #         "/home/danielh/Documents/pyaerocom/pyaro-readers/src/pyaro_readers/eeareader/data"
-# #     )
-# # )
+    )
 
 # eead.postprocess_all_files(
 #     Path(

@@ -1,6 +1,8 @@
 [defaults]
 "pollutants" = [
     "SO2",
+    "SO4--",
+    "SO4 (H2SO4 aerosols) (SO4--)",
     "PM10",
     "PM2.5",
     "O3",
