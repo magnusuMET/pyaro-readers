@@ -258,7 +258,7 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
 
         return metadata
     
-    def _read_data(self) -> dict:
+    def _read_cfg(self) -> dict:
         with open(DATA_TOML, "rb") as f:
             data = tomllib.load(f)
         return data
