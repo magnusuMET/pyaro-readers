@@ -162,8 +162,10 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 if file_datapoints == 0:
                     continue
                 df = lf
-
-                station_metadata = self.metadata[df.row(0)[0].split("/")[-1]]
+                try:
+                    station_metadata = self.metadata[df.row(0)[0].split("/")[-1]]
+                except:
+                    continue
 
                 file_unit = df.row(0)[df.get_column_index("Unit")]
 

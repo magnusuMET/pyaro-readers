@@ -53,7 +53,6 @@ class EEADownloader:
             raise results.raise_for_status()
 
     def download_and_save(self, request: dict, save_loc: Path) -> None:
-        breakpoint()
         urls = self._get_urls(request)
 
         if not save_loc.is_dir():
@@ -159,8 +158,8 @@ class EEADownloader:
                 request = {
                     "countries": [country],
                     "cities": [],
-                    "properties": self.make_pollutant_url_list(poll),
-                    "datasets": dataset,
+                    "pollutants": self.make_pollutant_url_list(poll),
+                    "dataset": dataset,
                     "source": "Api",
                 }
                 self.download_and_save(request, full_loc)
