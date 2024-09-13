@@ -17,6 +17,11 @@ from pyaro.timeseries import (
     Station,
 )
 
+try:
+    import tomllib
+except ImportError:  # python <3.11
+    import tomli as tomllib
+
 FLAGS_VALID = {-99: False, -1: False, 1: True, 2: False, 3: False, 4: True}
 VERIFIED_LVL = [1, 2, 3]
 DATA_TOML = Path(__file__).parent / "data.toml"
@@ -73,6 +78,7 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._set_filters(filters)
 
         self.metadata = self._read_metadata(filename)
+        self.datafile = self._read_data()
 
         self._read_polars(filters, filename)
 
@@ -167,7 +173,7 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 except:
                     continue
 
-                file_unit = df.row(0)[df.get_column_index("Unit")]
+                file_unit = self._convert_unit(df.row(0)[df.get_column_index("Unit")])
 
                 for key in PARQUET_FIELDS:
                     array[key][
@@ -248,6 +254,15 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 }
 
         return metadata
+    
+    def _read_data(self) -> dict:
+        with open(DATA_TOML, "rb") as f:
+            data = tomllib.load(f)
+        return data
+
+    def _convert_unit(self, unit: str) -> str:
+        return self.datafile["units"][unit]
+
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]
