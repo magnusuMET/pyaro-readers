@@ -174,6 +174,9 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     continue
 
                 file_unit = self._convert_unit(df.row(0)[df.get_column_index("Unit")])
+                if s in self.datafile["changeunit"]:
+                    file_unit = self.datafile["changeunit"][s]["unit"]
+                    df.with_columns((polars.col(PARQUET_FIELDS["values"]) * self.datafile["changeunit"][s]["factor"]).alias(PARQUET_FIELDS["values"]))
 
                 for key in PARQUET_FIELDS:
                     array[key][
