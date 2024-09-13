@@ -78,7 +78,7 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._set_filters(filters)
 
         self.metadata = self._read_metadata(filename)
-        self.datafile = self._read_data()
+        self.datafile = self._read_cfg()
 
         self._read_polars(filters, filename)
 
