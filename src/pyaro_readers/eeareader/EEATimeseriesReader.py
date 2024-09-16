@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 FLAGS_VALID = {-99: False, -1: False, 1: True, 2: False, 3: False, 4: True}
 VERIFIED_LVL = [1, 2, 3]
 DATA_TOML = path.join(path.dirname(__file__), "data.toml")
-# Path(__file__).parent / "data.toml"
 FILL_COUNTRY_FLAG = False
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -75,7 +74,6 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self,
         filename,
         filters={},
-        fill_country_flag: bool = FILL_COUNTRY_FLAG,
     ):
         self._filename = filename
         self._stations = {}
@@ -146,6 +144,7 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                         polars.read_parquet(file), (start_date, end_date)
                     )
                     if lf.is_empty():
+                        logger.info(f"Data for file {file} is empty. Skipping")
                         continue
                 else:
                     lf = polars.read_parquet(file)
@@ -176,6 +175,9 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 try:
                     station_metadata = self.metadata[df.row(0)[0].split("/")[-1]]
                 except:
+                    logger.info(
+                        f"Could not extract the metadata for {df.row(0)[0].split("/")[-1]}"
+                    )
                     continue
 
                 file_unit = self._convert_unit(df.row(0)[df.get_column_index("Unit")])
@@ -249,6 +251,9 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     lat = float(words[4])
                     alt = float(words[5])
                 except:
+                    logger.info(
+                        f"Could not interpret lat, lon, alt for line {line} in metadata. Skipping"
+                    )
                     continue
                 metadata[words[0]] = {
                     "lon": lon,

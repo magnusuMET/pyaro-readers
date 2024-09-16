@@ -133,7 +133,10 @@ class EEADownloader:
 
     @app.command(name="download")
     def download_default(
-        self, save_loc: Path, dataset: int = DATABASES["VERIFIED"], pollutants: list | None= None,
+        self,
+        save_loc: Path,
+        dataset: int = DATABASES["VERIFIED"],
+        pollutants: list | None = None,
     ) -> None:
         if not save_loc.is_dir():
             save_loc.mkdir(parents=True, exist_ok=True)
@@ -265,7 +268,7 @@ def postprocess(
 
 
 if __name__ == "__main__":
-    #app()
+    # app()
 
     pollutants = [
         "SO2",
@@ -273,13 +276,7 @@ if __name__ == "__main__":
         "SO4 (H2SO4 aerosols) (SO4--)",
     ]
     eead = EEADownloader()
-    eead.download_default(
-        Path(
-            "/nird/home/dulte/data/EEA"
-        ),
-        pollutants = pollutants
-
-    )
+    eead.download_default(Path("/nird/home/dulte/data/EEA"), pollutants=pollutants)
 
 # eead.postprocess_all_files(
 #     Path(
