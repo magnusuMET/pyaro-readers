@@ -1,3 +1,6 @@
+import logging
+from os import path
+
 from tqdm import tqdm
 from datetime import datetime, timedelta
 
@@ -20,9 +23,13 @@ try:
 except ImportError:  # python <3.11
     import tomli as tomllib
 
+
+logger = logging.getLogger(__name__)
+
 FLAGS_VALID = {-99: False, -1: False, 1: True, 2: False, 3: False, 4: True}
 VERIFIED_LVL = [1, 2, 3]
-DATA_TOML = Path(__file__).parent / "data.toml"
+DATA_TOML = path.join(path.dirname(__file__), "data.toml")
+# Path(__file__).parent / "data.toml"
 FILL_COUNTRY_FLAG = False
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
