@@ -176,7 +176,7 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     station_metadata = self.metadata[df.row(0)[0].split("/")[-1]]
                 except:
                     logger.info(
-                        f"Could not extract the metadata for {df.row(0)[0].split("/")[-1]}"
+                        f'Could not extract the metadata for {df.row(0)[0].split("/")[-1]}'
                     )
                     continue
 
