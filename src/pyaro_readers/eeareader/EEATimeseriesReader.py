@@ -11,8 +11,6 @@ import polars
 from pyaro.timeseries import (
     AutoFilterReaderEngine,
     Data,
-    Filter,
-    Flag,
     NpStructuredData,
     Station,
 )
@@ -78,7 +76,7 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._set_filters(filters)
 
         self.metadata = self._read_metadata(filename)
-        self.datafile = self._read_cfg()
+        self.data_cfg = self._read_cfg()
 
         self._read_polars(filters, filename)
 
@@ -174,19 +172,16 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     continue
 
                 file_unit = self._convert_unit(df.row(0)[df.get_column_index("Unit")])
-                if s in self.datafile["changeunit"]:
-                    file_unit = self.datafile["changeunit"][s]["unit"]
-                    df.with_columns((polars.col(PARQUET_FIELDS["values"]) * self.datafile["changeunit"][s]["factor"]).alias(PARQUET_FIELDS["values"]))
 
                 for key in PARQUET_FIELDS:
-                    array[key][
-                        current_idx : current_idx + file_datapoints
-                    ] = df.get_column(PARQUET_FIELDS[key]).to_numpy()
+                    array[key][current_idx : current_idx + file_datapoints] = (
+                        df.get_column(PARQUET_FIELDS[key]).to_numpy()
+                    )
 
                 for key, value in METADATA_FILEDS.items():
-                    array[key][
-                        current_idx : current_idx + file_datapoints
-                    ] = station_metadata[value]
+                    array[key][current_idx : current_idx + file_datapoints] = (
+                        station_metadata[value]
+                    )
 
                 current_idx += file_datapoints
 
@@ -257,15 +252,14 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 }
 
         return metadata
-    
+
     def _read_cfg(self) -> dict:
         with open(DATA_TOML, "rb") as f:
-            data = tomllib.load(f)
-        return data
+            cfg = tomllib.load(f)
+        return cfg
 
     def _convert_unit(self, unit: str) -> str:
-        return self.datafile["units"][unit]
-
+        return self.data_cfg["units"][unit]
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]

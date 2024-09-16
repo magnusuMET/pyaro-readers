@@ -62,8 +62,6 @@
 "ugso2.m-3" = "µg SO2/m3"
 "nm" = "nm"
 
-[changeunit]
-"SO4--" = { unit = "µg /m3", factor = 2995.82 }
 
 [pollutant]
 1 = "SO2"
