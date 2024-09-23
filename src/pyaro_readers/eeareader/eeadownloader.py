@@ -272,11 +272,13 @@ if __name__ == "__main__":
 
     pollutants = [
         "SO2",
-        "SO4--",
-        "SO4 (H2SO4 aerosols) (SO4--)",
+        # "SO4--",
+        # "SO4 (H2SO4 aerosols) (SO4--)",
     ]
     eead = EEADownloader()
-    eead.download_default(Path("/nird/home/dulte/data/EEA"), pollutants=pollutants)
+    eead.download_default(
+        Path("/home/danielh/Documents/pyaerocom/test_data/EEA"), pollutants=pollutants
+    )
 
 # eead.postprocess_all_files(
 #     Path(
