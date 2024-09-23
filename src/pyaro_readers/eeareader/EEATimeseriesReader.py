@@ -1,3 +1,6 @@
+import logging
+from os import path
+
 from tqdm import tqdm
 from datetime import datetime, timedelta
 
@@ -11,15 +14,21 @@ import polars
 from pyaro.timeseries import (
     AutoFilterReaderEngine,
     Data,
-    Filter,
-    Flag,
     NpStructuredData,
     Station,
 )
 
+try:
+    import tomllib
+except ImportError:  # python <3.11
+    import tomli as tomllib
+
+
+logger = logging.getLogger(__name__)
+
 FLAGS_VALID = {-99: False, -1: False, 1: True, 2: False, 3: False, 4: True}
 VERIFIED_LVL = [1, 2, 3]
-DATA_TOML = Path(__file__).parent / "data.toml"
+DATA_TOML = path.join(path.dirname(__file__), "data.toml")
 FILL_COUNTRY_FLAG = False
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -65,7 +74,6 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self,
         filename,
         filters={},
-        fill_country_flag: bool = FILL_COUNTRY_FLAG,
     ):
         self._filename = filename
         self._stations = {}
@@ -73,6 +81,7 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
         self._set_filters(filters)
 
         self.metadata = self._read_metadata(filename)
+        self.data_cfg = self._read_cfg()
 
         self._read_polars(filters, filename)
 
@@ -135,6 +144,7 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                         polars.read_parquet(file), (start_date, end_date)
                     )
                     if lf.is_empty():
+                        logger.info(f"Data for file {file} is empty. Skipping")
                         continue
                 else:
                     lf = polars.read_parquet(file)
@@ -162,10 +172,15 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 if file_datapoints == 0:
                     continue
                 df = lf
+                try:
+                    station_metadata = self.metadata[df.row(0)[0].split("/")[-1]]
+                except:
+                    logger.info(
+                        f'Could not extract the metadata for {df.row(0)[0].split("/")[-1]}'
+                    )
+                    continue
 
-                station_metadata = self.metadata[df.row(0)[0].split("/")[-1]]
-
-                file_unit = df.row(0)[df.get_column_index("Unit")]
+                file_unit = self._convert_unit(df.row(0)[df.get_column_index("Unit")])
 
                 for key in PARQUET_FIELDS:
                     array[key][
@@ -236,6 +251,9 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                     lat = float(words[4])
                     alt = float(words[5])
                 except:
+                    logger.info(
+                        f"Could not interpret lat, lon, alt for line {line} in metadata. Skipping"
+                    )
                     continue
                 metadata[words[0]] = {
                     "lon": lon,
@@ -246,6 +264,14 @@ class EEATimeseriesReader(AutoFilterReaderEngine.AutoFilterReader):
                 }
 
         return metadata
+
+    def _read_cfg(self) -> dict:
+        with open(DATA_TOML, "rb") as f:
+            cfg = tomllib.load(f)
+        return cfg
+
+    def _convert_unit(self, unit: str) -> str:
+        return self.data_cfg["units"][unit]
 
     def _unfiltered_data(self, varname) -> Data:
         return self._data[varname]

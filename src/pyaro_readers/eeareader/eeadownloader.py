@@ -53,7 +53,6 @@ class EEADownloader:
             raise results.raise_for_status()
 
     def download_and_save(self, request: dict, save_loc: Path) -> None:
-        breakpoint()
         urls = self._get_urls(request)
 
         if not save_loc.is_dir():
@@ -134,7 +133,10 @@ class EEADownloader:
 
     @app.command(name="download")
     def download_default(
-        self, save_loc: Path, dataset: int = DATABASES["VERIFIED"], pollutants: list | None= None,
+        self,
+        save_loc: Path,
+        dataset: int = DATABASES["VERIFIED"],
+        pollutants: list | None = None,
     ) -> None:
         if not save_loc.is_dir():
             save_loc.mkdir(parents=True, exist_ok=True)
@@ -159,8 +161,8 @@ class EEADownloader:
                 request = {
                     "countries": [country],
                     "cities": [],
-                    "properties": self.make_pollutant_url_list(poll),
-                    "datasets": dataset,
+                    "pollutants": self.make_pollutant_url_list(poll),
+                    "dataset": dataset,
                     "source": "Api",
                 }
                 self.download_and_save(request, full_loc)
@@ -266,20 +268,16 @@ def postprocess(
 
 
 if __name__ == "__main__":
-    #app()
+    # app()
 
     pollutants = [
         "SO2",
-        "SO4--",
-        "SO4 (H2SO4 aerosols) (SO4--)",
+        # "SO4--",
+        # "SO4 (H2SO4 aerosols) (SO4--)",
     ]
     eead = EEADownloader()
     eead.download_default(
-        Path(
-            "/nird/home/dulte/data/EEA"
-        ),
-        pollutants = pollutants
-
+        Path("/home/danielh/Documents/pyaerocom/test_data/EEA"), pollutants=pollutants
     )
 
 # eead.postprocess_all_files(
