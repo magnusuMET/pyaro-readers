@@ -31,7 +31,6 @@ pollutants = [
     "HNO3",
 ]
 
-changeunit = {"SO4--": '{ unit = "µg /m3", factor = 2995.82 }'}
 
 with open("response.json", "r") as f:
     properties = {}
@@ -56,11 +55,6 @@ with open("datatest.toml", "w") as target:
     target.write('"pollutatnts" = [\n')
     for poll in pollutants:
         target.write(f'"{poll}",\n')
-    target.write("]\n\n")
-
-    target.write("[changeunits]\n")
-    for s in changeunit:
-        target.write(f'"{s}" = {changeunit[s]}\n')
     target.write("]\n\n")
 
     target.write("[units]\n")
